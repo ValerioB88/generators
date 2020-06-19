@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import utils as utils
 from compute_mean_std_dataset import compute_mean_and_std_from_folder
-from generate_datasets.generators import from_group_ID_to_features, draw_face
-from generate_datasets.generators import get_background_color, get_translation_values, TranslationType, BackGroundColorType
+from generate_datasets.generators.dummy_face_generators.utils_dummy_faces import from_group_ID_to_features, draw_face
+from generate_datasets.generators.utils_generator import get_background_color, get_translation_values, TranslationType, BackGroundColorType
 
 
 def save_dataset(num_faces_each_transl, size_canvas, length_face, width_face, folder, translationX, translationY, background_color_type, groupID):

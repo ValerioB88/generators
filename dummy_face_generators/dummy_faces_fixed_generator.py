@@ -1,8 +1,8 @@
 from multiprocessing.dummy import freeze_support
 from torch.utils.data import DataLoader
 import numpy as np
-from generate_datasets.generators import draw_face
-from generate_datasets.generators import TranslationType, BackGroundColorType
+from generate_datasets.generators.dummy_face_generators.utils_dummy_faces import draw_face
+from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from generate_datasets.generators.dummy_face_generators.dummy_faces_random_generator import DummyFaceRandomGenerator
 
 class DummyFaceFixedGenerator(DummyFaceRandomGenerator):

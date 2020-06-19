@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from enum import Enum
 
-from generate_datasets.generators import random_colour, numpy_tuple_to_builtin_tuple
+from generate_datasets.generators.utils_generator import random_colour, numpy_tuple_to_builtin_tuple
 
 
 class EyesType(Enum):
