@@ -1,17 +1,17 @@
 from multiprocessing.dummy import freeze_support
-from visualization import vis_utils as vis
 from torch.utils.data import DataLoader
 import numpy as np
-from generate_dataset.dummy_faces_generator.utils import TranslationType, draw_face, BackGroundColorType
-from generate_dataset.dummy_faces_generator.dummy_faces_random_generator import DummyFaceRandomGenerator
+from generate_datasets.generators import draw_face
+from generate_datasets.generators import TranslationType, BackGroundColorType
+from generate_datasets.generators.dummy_face_generators.dummy_faces_random_generator import DummyFaceRandomGenerator
 
 class DummyFaceFixedGenerator(DummyFaceRandomGenerator):
-    def __init__(self, grid_size, num_repetitions, translation_type, background_color_type: BackGroundColorType, middle_empty: BackGroundColorType, grayscale, name='', random_gray_face=True, random_face_jitter=True):
+    def __init__(self, grid_size, num_repetitions, translation_type, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator='', random_gray_face=True, random_face_jitter=True):
         self.grid_size = grid_size
         self.num_repetitions = num_repetitions
         self.mesh_trX, self.mesh_trY, self.mesh_class, self.mesh_rep = [], [], [], []
         self.current_index = 0
-        super(DummyFaceFixedGenerator, self).__init__(translation_type, background_color_type, middle_empty, grayscale, name=name, random_gray_face=random_gray_face, random_face_jitter=random_face_jitter)
+        super(DummyFaceFixedGenerator, self).__init__(translation_type, background_color_type, middle_empty, grayscale, name_generator=name_generator, random_gray_face=random_gray_face, random_face_jitter=random_face_jitter)
 
     def finalize(self):
         for groupID in range(self.num_classes):
@@ -31,7 +31,7 @@ class DummyFaceFixedGenerator(DummyFaceRandomGenerator):
     def __len__(self):
         return len(self.mesh_trX)
 
-    def _get_translation(self, groupID):
+    def _get_translation(self, class_ID):
         return self.mesh_trX[self.current_index], self.mesh_trY[self.current_index]
 
     def _get_id(self):
@@ -50,7 +50,7 @@ def do_stuff():
                         4: TranslationType.ONE_PIXEL,
                         5: TranslationType.LEFT}
 
-    dataset = DummyFaceFixedGenerator(grid_size=30, num_repetitions=1, translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name='prova')
+    dataset = DummyFaceFixedGenerator(grid_size=30, num_repetitions=1, translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     for i, data in enumerate(dataloader):
