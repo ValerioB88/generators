@@ -3,7 +3,7 @@ import PIL.Image as Image
 from visualization import vis_utils as vis
 from torch.utils.data import DataLoader
 import numpy as np
-from generate_datasets.generators.utils_generator import draw_face, from_group_ID_to_features
+from generate_datasets.generators.dummy_face_generators.utils_dummy_faces import draw_face, from_group_ID_to_features
 from generate_datasets.generators.utils_generator import get_background_color, TranslationType, BackGroundColorType
 import cv2
 from generate_datasets.generators.translate_generator import TranslateGenerator

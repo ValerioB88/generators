@@ -90,7 +90,6 @@ class TranslationType(Enum):
     ONE_PIXEL = 6
     MULTI = 7
 
-
 class BackGroundColorType(Enum):
     WHITE = 0
     BLACK = 1

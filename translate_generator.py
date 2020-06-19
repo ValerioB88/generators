@@ -2,7 +2,7 @@ from torchvision import transforms
 from compute_mean_std_dataset import compute_mean_and_std_from_dataset
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
-from generate_datasets.generators import get_range_translation
+from generate_datasets.generators.utils_generator import get_range_translation, TranslationType
 import pathlib
 import pickle
 import os
@@ -11,6 +11,10 @@ import numpy as np
 
 class TranslateGenerator(ABC, Dataset):
     def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', size_canvas=(224, 224), size_object=(50, 50), grayscale=False):
+        """
+
+        @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
+        """
         self.transform = None
         self.translation_type = translation_type
         self.size_object = 60
@@ -23,19 +27,29 @@ class TranslateGenerator(ABC, Dataset):
         self.size_object = size_object  # x and y
         self.num_classes = self.define_num_classes()
 
-        self.multi_translation_mode = 1 if isinstance(self.translation_type, dict) else 0
         self.translations_range = {}
-        assert len(self.translation_type) == self.num_classes if self.multi_translation_mode else True
+        if isinstance(self.translation_type, dict):
+            self.translation_type_str = "".join(["".join([str(k), str.lower(str.split(str(v), '.')[1])]) for k, v in self.translation_type.items()])
+            assert len(self.translation_type) == self.num_classes
+            for idx, transl in self.translation_type.items():
+                self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
 
-        if not self.multi_translation_mode:
+        if isinstance(self.translation_type, TranslationType):
             translation_type_tmp = dict([(i, self.translation_type) for i in range(self.num_classes)])
             self.translation_type_str = str.lower(str.split(str(self.translation_type), '.')[1])
-        else:
-            translation_type_tmp = self.translation_type
-            self.translation_type_str = "".join(["".join([str(k), str.lower(str.split(str(v), '.')[1])]) for k, v in self.translation_type.items()])
+            for idx, transl in translation_type_tmp.items():
+                self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
 
-        for idx, transl in translation_type_tmp.items():
-            self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
+        if isinstance(self.translation_type, tuple) and len(self.translation_type) == 2:
+            self.translation_type_str = str(self.translation_type)
+            for idx in range(self.num_classes):
+                self.translations_range[idx] = self.translation_type[0], self.translation_type[0] + 1, self.translation_type[1], self.translation_type[1] + 1
+
+        if isinstance(self.translation_type, tuple) and len(self.translation_type) == 4:
+            self.translation_type_str = str(self.translation_type)
+            for idx in range(self.num_classes):
+                self.translations_range[idx] = self.translation_type[0], self.translation_type[1], self.translation_type[2], self.translation_type[3]
+
 
         self.finalize()
 
@@ -86,7 +100,7 @@ class TranslateGenerator(ABC, Dataset):
 
     @abstractmethod
     def define_num_classes(self):
-        return 1, 2
+        return 1
 
     @abstractmethod
     def __len__(self):

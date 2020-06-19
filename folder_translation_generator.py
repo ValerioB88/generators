@@ -7,16 +7,16 @@ import PIL.Image as Image
 from torch.utils.data import DataLoader
 from torchvision import utils
 import numpy as np
-from generate_datasets.generators import TranslationType, BackGroundColorType, get_background_color
+from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
 
 import utils
-from translate_generator import TranslateGenerator
+from generate_datasets.generators.translate_generator import TranslateGenerator
 
 class FolderTranslationGenerator(TranslateGenerator):
     '''
     This generator is given a folder with images inside, and each image is treated as a different class.
     '''
-    def __init__(self, folder, translation_type: TranslationType, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator, size_canvas=(224, 224), size_object=None):
+    def __init__(self, folder, translation_type, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator, size_canvas=(224, 224), size_object=None):
         self.folder = folder
         self.folder_basename = os.path.basename(os.path.normpath(folder))
         self.name_classes = [os.path.basename(i) for i in glob.glob(self.folder + '/**')]
