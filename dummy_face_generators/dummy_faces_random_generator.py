@@ -7,7 +7,7 @@ from generate_datasets.generators.dummy_face_generators.utils_dummy_faces import
 from generate_datasets.generators.utils_generator import get_background_color, TranslationType, BackGroundColorType
 import cv2
 from generate_datasets.generators.translate_generator import TranslateGenerator
-
+print('UPDATED SUBMODULE!')
 class DummyFaceRandomGenerator(TranslateGenerator):
     def __init__(self, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=True, random_gray_face=True, random_face_jitter=True, size_canvas=(224, 224), length_face=60):
         self.random_face_jitter = random_face_jitter
