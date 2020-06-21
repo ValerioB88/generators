@@ -45,7 +45,7 @@ class DummyFaceRandomGenerator(TranslateGenerator):
         return canvas, face_center
 
     def _get_id(self):
-        return np.random.choice(list(self.translations_range.keys()))
+        return int(np.random.choice(list(self.translations_range.keys())))
 
     def __getitem__(self, idx):
         label = self._get_id()
