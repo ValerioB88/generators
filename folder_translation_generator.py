@@ -16,7 +16,7 @@ class FolderTranslationGenerator(TranslateGenerator):
     '''
     This generator is given a folder with images inside, and each image is treated as a different class.
     '''
-    def __init__(self, folder, translation_type, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator, size_canvas=(224, 224), size_object=None):
+    def __init__(self, folder, translation_type, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator, size_canvas=(224, 224), size_object=(50, 50)):
         self.folder = folder
         self.folder_basename = os.path.basename(os.path.normpath(folder))
         self.name_classes = [os.path.basename(i) for i in glob.glob(self.folder + '/**')]
@@ -63,7 +63,7 @@ class FolderTranslationGenerator(TranslateGenerator):
         return canvas, label, random_center
 
 def do_stuff():
-    leek_dataset = FolderTranslationGenerator('./data/LeekImages', TranslationType.LEFT, background_color_type=BackGroundColorType.RANDOM, middle_empty=False, grayscale=False, name_generator='dataLeek', size_object=np.array([50, 50]), size_canvas=(400, 400))
+    leek_dataset = FolderTranslationGenerator('./data/LeekImages_transparent', TranslationType.LEFT, background_color_type=BackGroundColorType.RANDOM, middle_empty=False, grayscale=False, name_generator='dataLeek', size_object=np.array([50, 50]), size_canvas=(224, 224))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
