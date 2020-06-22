@@ -70,14 +70,15 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
     return minX, maxX, minY, maxY
 
 
-def split_canvas_in_n_grids(num_classes, size_canvas):
+def split_canvas_in_n_grids(num_classes, size_canvas, buffer=0):
+    # buffer is the space left on the borders. Usually equal to the object size / 2
     num_grids_each_side = np.sqrt(num_classes)
     if num_grids_each_side % 1 != 0:
         assert False, 'You need a square number, but sqrt({}) is {}'.format(num_classes, num_grids_each_side)
     num_grids_each_side = int(num_grids_each_side)
     grid_size = size_canvas[0] // num_grids_each_side
-    minX_side = np.linspace(0, size_canvas[0], num_grids_each_side, endpoint=False)
-    minY_side = np.linspace(0, size_canvas[1], num_grids_each_side, endpoint=False)
+    minX_side = np.linspace(buffer, size_canvas[0]-buffer-grid_size, num_grids_each_side)
+    minY_side = np.linspace(buffer, size_canvas[1]-buffer-grid_size, num_grids_each_side)
     maxX_side = minX_side + grid_size
     maxY_side = minY_side + grid_size
     minX_m, minY_m = np.meshgrid(minX_side, minY_side)
