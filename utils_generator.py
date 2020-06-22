@@ -86,7 +86,7 @@ def split_canvas_in_n_grids(num_classes, size_canvas):
     maxX, maxY = maxX_m.flatten(), maxY_m.flatten()
     translation_type = {}
     for i in range(num_classes):
-        translation_type[i] = minX[i], maxX[i], minY[i], maxY[i]
+        translation_type[i] = int(minX[i]), int(maxX[i]), int(minY[i]), int(maxY[i])
 
     return translation_type
 
