@@ -30,11 +30,11 @@ class DummyFaceRandomGenerator(TranslateGenerator):
     def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label, random_face_jitter=True):
         return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=False, random_face_jitter=random_face_jitter)
 
-    def get_img_id(self, label):
+    def get_img_id(self, face_id):
         canvas = np.zeros(self.size_canvas, np.uint8) + get_background_color(self.background_color_type)
-        is_smiling, eyes_type = from_group_ID_to_features(label)
-        face_center = self._get_translation(label)
-        canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, label, random_face_jitter=self.random_face_jitter)
+        is_smiling, eyes_type = from_group_ID_to_features(face_id)
+        face_center = self._get_translation(face_id)
+        canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, face_id, random_face_jitter=self.random_face_jitter)
         canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
         canvas = Image.fromarray(canvas)
         if self.transform is not None:
@@ -44,12 +44,13 @@ class DummyFaceRandomGenerator(TranslateGenerator):
 
         return canvas, face_center
 
-    def _get_id(self):
+    def _get_random_id(self):
         return int(np.random.choice(list(self.translations_range.keys())))
 
     def __getitem__(self, idx):
-        label = self._get_id()
-        canvas, face_center = self.get_img_id(label)
+        face_id = self._get_random_id()
+        canvas, face_center = self.get_img_id(face_id)
+        label = list(self.translations_range.keys()).index(face_id)
         return canvas, label, face_center
 
 
@@ -98,9 +99,6 @@ def do_stuff():
     img, lab, _ = next(iterator)
     vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
-    iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
     scrambling_list = {0: False,
                        5: True}

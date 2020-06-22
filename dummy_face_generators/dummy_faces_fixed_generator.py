@@ -34,7 +34,7 @@ class DummyFaceFixedGenerator(DummyFaceRandomGenerator):
     def _get_translation(self, class_ID):
         return self.mesh_trX[self.current_index], self.mesh_trY[self.current_index]
 
-    def _get_id(self):
+    def _get_random_id(self):
         return self.mesh_class[self.current_index]
 
     def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label, random_face_jitter=True):
