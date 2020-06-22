@@ -27,28 +27,21 @@ class TranslateGenerator(ABC, Dataset):
         self.num_classes = self.define_num_classes()
 
         self.translations_range = {}
+        def translation_type_to_str(translation_type):
+            return str.lower(str.split(str(translation_type), '.')[1]) if isinstance(translation_type, TranslationType) else "_".join(str(translation_type).split(", "))
+
         if isinstance(self.translation_type, dict):
-            self.translation_type_str = "".join(["".join([str(k), str.lower(str.split(str(v), '.')[1])]) for k, v in self.translation_type.items()])
+            self.translation_type_str = "".join(["".join([str(k), translation_type_to_str(v)]) for k, v in self.translation_type.items()])
             assert len(self.translation_type) == self.num_classes
             for idx, transl in self.translation_type.items():
                 self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
 
-        if isinstance(self.translation_type, TranslationType):
-            translation_type_tmp = dict([(i, self.translation_type) for i in range(self.num_classes)])
-            self.translation_type_str = str.lower(str.split(str(self.translation_type), '.')[1])
-            for idx, transl in translation_type_tmp.items():
-                self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
-
-        if isinstance(self.translation_type, tuple) and len(self.translation_type) == 2:
-            self.translation_type_str = str(self.translation_type)
+        # Same translation type for all classes
+        # can be TranslationType, tuple (X, Y) or tuple of (minX, maxX, minY, maxY)
+        if not isinstance(self.translation_type, dict):
+            self.translation_type_str = translation_type_to_str(self.translation_type)
             for idx in range(self.num_classes):
-                self.translations_range[idx] = self.translation_type[0], self.translation_type[0] + 1, self.translation_type[1], self.translation_type[1] + 1
-
-        if isinstance(self.translation_type, tuple) and len(self.translation_type) == 4:
-            self.translation_type_str = str(self.translation_type)
-            for idx in range(self.num_classes):
-                self.translations_range[idx] = self.translation_type[0], self.translation_type[1], self.translation_type[2], self.translation_type[3]
-
+                self.translations_range[idx] = get_range_translation(self.translation_type, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
 
         self.finalize()
 
@@ -58,6 +51,8 @@ class TranslateGenerator(ABC, Dataset):
     def save_stats(self):
         pathlib.Path('./data/generators/').mkdir(parents=True, exist_ok=True)
         filename = '{}_tr_[{}]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.translation_type_str, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
+        if len(filename) > 150:
+            filename = '{}_tr_[multi_custom]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
         if os.path.exists('./data/generators/{}'.format(filename)) and os.path.exists('./data/generators/stats_{}'.format(filename)):
             with open('./data/generators/tmp_{}'.format(filename), 'wb') as f:
                 pickle.dump(self, f)

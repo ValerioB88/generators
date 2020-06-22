@@ -105,6 +105,12 @@ def do_stuff():
     img, lab, _ = next(iterator)
     vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
+    dataset = DummyFaceRandomGenerator((10, 51), background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
+
+    iterator = iter(dataloader)
+    img, lab, _ = next(iterator)
+    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
     scrambling_list = {0: False,
                        5: True}
@@ -112,6 +118,26 @@ def do_stuff():
                         5: TranslationType.LEFT}
 
     dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, background_color_type=BackGroundColorType.RANDOM, translation_type=translation_list, middle_empty=False, name_generator='prova', grayscale=True)
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
+
+    iterator = iter(dataloader)
+    img, lab, _ = next(iterator)
+    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
+
+    translation_list = {0: (10, 20),
+                        4: (100, 20),
+                        5: (150, 150)}
+    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
+
+    iterator = iter(dataloader)
+    img, lab, _ = next(iterator)
+    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
+
+    translation_list = {0: (10, 20, 11, 21),
+                        4: (0, 120, 200, 201),
+                        5: (150, 150)}
+    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

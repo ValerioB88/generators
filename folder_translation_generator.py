@@ -18,6 +18,8 @@ class FolderTranslationGenerator(TranslateGenerator):
     '''
     def __init__(self, folder, translation_type, background_color_type: BackGroundColorType, middle_empty, grayscale, name_generator, size_canvas=(224, 224), size_object=(50, 50)):
         self.folder = folder
+        if not os.path.exists(self.folder):
+            assert False, 'Folder {} does not exist'.format(self.folder)
         self.folder_basename = os.path.basename(os.path.normpath(folder))
         self.name_classes = [os.path.basename(i) for i in glob.glob(self.folder + '/**')]
 
