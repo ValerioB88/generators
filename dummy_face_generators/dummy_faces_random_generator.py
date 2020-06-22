@@ -10,6 +10,12 @@ from generate_datasets.generators.translate_generator import TranslateGenerator
 
 class DummyFaceRandomGenerator(TranslateGenerator):
     def __init__(self, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=True, random_gray_face=True, random_face_jitter=True, size_canvas=(224, 224), length_face=60):
+        """
+
+        @param translation_type: when a dict, translation type key refers to the face_id. You don't need to use all implemented
+        type of faces.For example, you can only use the id 0 and 5. The attribute self.num_classes will be equal to 2.
+        The returned labels will be contiguous: 0, 1, regardless of the face id used.
+        """
         self.random_face_jitter = random_face_jitter
         self.random_gray_face = random_gray_face
         self.length_face = length_face
