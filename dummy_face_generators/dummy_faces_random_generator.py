@@ -9,7 +9,7 @@ import cv2
 from generate_datasets.generators.translate_generator import TranslateGenerator
 
 class DummyFaceRandomGenerator(TranslateGenerator):
-    def __init__(self, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=True, random_gray_face=True, random_face_jitter=True, size_canvas=(224, 224), length_face=60):
+    def __init__(self, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, random_gray_face=True, random_face_jitter=True, size_canvas=(224, 224), length_face=60):
         """
 
         @param translation_type: when a dict, translation type key refers to the face_id. You don't need to use all implemented

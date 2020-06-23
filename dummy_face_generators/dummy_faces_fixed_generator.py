@@ -50,7 +50,7 @@ def do_stuff():
                         4: TranslationType.ONE_PIXEL,
                         5: TranslationType.LEFT}
 
-    dataset = DummyFaceFixedGenerator(grid_size=30, num_repetitions=1, translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceFixedGenerator(grid_size=30, num_repetitions=1, translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=False, name_generator='prova')
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     for i, data in enumerate(dataloader):
