@@ -19,8 +19,8 @@ class LeekGenerator(FolderTranslationGenerator):
         self.name_classes = ['A', 'B']
         num_classes = len(self.name_classes)
         self.group = {}
-        self.group['A'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SD.bmp')]
-        self.group['B'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SS.bmp')]
+        self.group['A'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SD.png')]
+        self.group['B'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SS.png')]
         return num_classes
 
     def __getitem__(self, idx):

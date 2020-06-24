@@ -59,6 +59,19 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             minY = int(size_canvas[0] * 0.25)
             maxY = int(size_canvas[0] * 0.25) + 1
 
+        if translation_type == TranslationType.CENTER_ONE_PIXEL:
+            minX = size_canvas[1] // 2
+            maxX = size_canvas[1] // 2 +1
+            minY = size_canvas[0] // 2
+            maxY = size_canvas[0] // 2 + 1
+
+        if translation_type == TranslationType.CENTER_SMALL_AREA:
+            minX = size_canvas[1] // 2 - 10
+            maxX = size_canvas[1] // 2 + 10
+            minY = size_canvas[0] // 2 - 10
+            maxY = size_canvas[0] // 2 + 10
+
+
     elif isinstance(translation_type, tuple) and len(translation_type) == 2:
         minX, maxX, minY, maxY = translation_type[0], translation_type[0] + 1, translation_type[1], translation_type[1] + 1
 
@@ -120,6 +133,8 @@ class TranslationType(Enum):
     VERY_SMALL_AREA_RIGHT = 5
     ONE_PIXEL = 6
     MULTI = 7
+    CENTER_ONE_PIXEL = 8
+    CENTER_SMALL_AREA = 9  # displaced by around 20 pixels
 
 class BackGroundColorType(Enum):
     WHITE = 0
