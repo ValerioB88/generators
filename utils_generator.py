@@ -61,7 +61,7 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
 
         if translation_type == TranslationType.CENTER_ONE_PIXEL:
             minX = size_canvas[1] // 2
-            maxX = size_canvas[1] // 2 +1
+            maxX = size_canvas[1] // 2 + 1
             minY = size_canvas[0] // 2
             maxY = size_canvas[0] // 2 + 1
 

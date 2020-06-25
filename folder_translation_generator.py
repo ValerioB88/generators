@@ -28,12 +28,6 @@ class FolderTranslationGenerator(TranslateGenerator):
     def define_num_classes(self):
         return len(self.name_classes)
 
-    def random_translation(self, groupID):
-        minX, maxX, minY, maxY = self.translations_range[groupID]
-        x = np.random.randint(minX, maxX)
-        y = np.random.randint(minY, maxY)
-        return x, y
-
     def set_range_translation(self, minX, maxX, minY, maxY):
         self.minX = minX
         self.maxX = maxX
@@ -48,7 +42,7 @@ class FolderTranslationGenerator(TranslateGenerator):
         if self.size_object is not None:
             image = image.resize(self.size_object)
 
-        random_center = self.random_translation(label)
+        random_center = self.random_translation(label, image_name)
         image_in_canvas = utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
 
         if self.transform is not None:
