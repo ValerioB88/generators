@@ -22,52 +22,47 @@ class DummyFaceRandomGenerator(TranslateGenerator):
         self.width_face = self.length_face * 0.8125
         self.size_object = (self.width_face, self.length_face)
 
-        super(DummyFaceRandomGenerator, self).__init__(translation_type, middle_empty, background_color_type, name_generator, size_canvas, self.size_object, grayscale)
+        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, self.size_object)
 
-    def define_num_classes(self):
+    def _define_num_classes_(self):
         return 6 if isinstance(self.translation_type, TranslationType) else len(self.translation_type)
 
-    def _get_translation(self, class_ID):
-        return self.random_translation(class_ID)
+    def _get_translation_(self, class_ID, image_name=None):
+        return self._random_translation_(class_ID)
 
     def __len__(self):
         return 300000  # np.iinfo(np.int64).max
 
-    def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label, random_face_jitter=True):
-        return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=False, random_face_jitter=random_face_jitter)
+    def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label):
+        return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=False, random_face_jitter=self.random_face_jitter)
 
     def get_img_id(self, face_id):
         canvas = np.zeros(self.size_canvas, np.uint8) + get_background_color(self.background_color_type)
         is_smiling, eyes_type = from_group_ID_to_features(face_id)
-        face_center = self._get_translation(face_id)
-        canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, face_id, random_face_jitter=self.random_face_jitter)
+        face_center = self._get_translation_(face_id)
+        canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, face_id)
         canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
         canvas = Image.fromarray(canvas)
-        if self.transform is not None:
-            canvas = self.transform(canvas)
-        else:
-            canvas = np.array(canvas)
 
         return canvas, face_center
 
-    def _get_random_id(self):
+    def _get_label_(self):
         return int(np.random.choice(list(self.translations_range.keys())))
 
-    def __getitem__(self, idx):
-        face_id = self._get_random_id()
-        canvas, face_center = self.get_img_id(face_id)
-        label = list(self.translations_range.keys()).index(face_id)
+    def _get_my_item_(self, idx, label):
+        canvas, face_center = self.get_img_id(label)
+        label = list(self.translations_range.keys()).index(label)
         return canvas, label, face_center
 
 
 class ScrambledDummyFaceRandomGenerator(DummyFaceRandomGenerator):
-    def __init__(self, scrambling_list, translation_type, middle_empty, background_color_type, name_generator='', grayscale = True, random_gray_face=True, random_face_jitter=True):
+    def __init__(self, scrambling_list, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         self.scrambling_group = scrambling_list
-        super(ScrambledDummyFaceRandomGenerator, self).__init__(translation_type, middle_empty, background_color_type, name_generator=name_generator, grayscale=grayscale, random_gray_face=random_gray_face, random_face_jitter=random_face_jitter)
+        super(ScrambledDummyFaceRandomGenerator, self).__init__(translation_type, middle_empty, background_color_type, name_generator=name_generator, grayscale=grayscale)
         assert self.scrambling_group.keys() == self.translations_range.keys(), 'Scrambling list and translation list should contain the same groups'
 
-    def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label, random_face_jitter=True):
-        return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=self.scrambling_group[label], random_gray_face_color=self.random_gray_face, random_face_jitter=random_face_jitter)
+    def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label):
+        return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=self.scrambling_group[label], random_gray_face_color=self.random_gray_face, random_face_jitter=self.random_face_jitter)
 
 
 def do_stuff():
@@ -79,7 +74,7 @@ def do_stuff():
                         5: TranslationType.LEFT}
     # neptune.init('valeriobiscione/valerioERC')
     # neptune.create_experiment(name='Test Generator', tags=['test'])
-    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.RANDOM, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceRandomGenerator(translation_list, middle_empty=True, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
     # utils.neptune_log_dataset_info(dataloader, logTxt='training')
 
@@ -88,7 +83,7 @@ def do_stuff():
     vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
 
-    dataset = DummyFaceRandomGenerator(TranslationType.LEFT,background_color_type=BackGroundColorType.RANDOM, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceRandomGenerator(TranslationType.LEFT, middle_empty=True, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
@@ -98,14 +93,14 @@ def do_stuff():
     translation_list = {0: TranslationType.LEFT,
                         4: TranslationType.ONE_PIXEL,
                         5: TranslationType.LEFT}
-    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceRandomGenerator(translation_list, middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
     vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
 
-    dataset = DummyFaceRandomGenerator((10, 51), background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceRandomGenerator((10, 51), middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
@@ -117,7 +112,7 @@ def do_stuff():
     translation_list = {0: TranslationType.LEFT,
                         5: TranslationType.LEFT}
 
-    dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, background_color_type=BackGroundColorType.RANDOM, translation_type=translation_list, middle_empty=False, name_generator='prova', grayscale=True)
+    dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, translation_type=translation_list, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
@@ -127,7 +122,7 @@ def do_stuff():
     translation_list = {0: (10, 20),
                         4: (100, 20),
                         5: (150, 150)}
-    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
+    dataset = DummyFaceRandomGenerator(translation_list, middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
@@ -137,16 +132,7 @@ def do_stuff():
     translation_list = {0: (10, 20, 11, 21),
                         4: (0, 120, 200, 201),
                         5: (150, 150)}
-    dataset = DummyFaceRandomGenerator(translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=True, name_generator='prova')
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
-
-    iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
-
-    scrambling_list = {0: False, 1: False, 2: False, 3: False, 4: True, 5: True}
-
-    dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, background_color_type=BackGroundColorType.RANDOM, translation_type=TranslationType.LEFT, middle_empty=False, name_generator='prova', grayscale=True)
+    dataset = DummyFaceRandomGenerator(translation_list, middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

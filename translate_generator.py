@@ -10,7 +10,7 @@ import filecmp
 import numpy as np
 
 class TranslateGenerator(ABC, Dataset):
-    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', size_canvas=(224, 224), size_object=(50, 50), grayscale=False):
+    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
@@ -24,7 +24,7 @@ class TranslateGenerator(ABC, Dataset):
         self.grayscale = grayscale
         self.size_canvas = size_canvas
         self.size_object = size_object  # x and y
-        self.num_classes = self.define_num_classes()
+        self.num_classes = self._define_num_classes_()
 
         self.translations_range = {}
         def translation_type_to_str(translation_type):
@@ -45,9 +45,9 @@ class TranslateGenerator(ABC, Dataset):
             for idx in range(self.num_classes):
                 self.translations_range[idx] = get_range_translation(self.translation_type, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
 
-        self.finalize()
+        self._finalize_init_()
 
-    def finalize(self):
+    def _finalize_init_(self):
         self.save_stats()
 
     def save_stats(self):
@@ -86,14 +86,14 @@ class TranslateGenerator(ABC, Dataset):
         else:
             self.transform = transforms.Compose([transforms.ToTensor(), normalize])
 
-    def random_translation(self, groupID, image_name=None):
+    def _random_translation_(self, groupID, image_name=None):
         minX, maxX, minY, maxY = self.translations_range[groupID]
         x = np.random.randint(minX, maxX)
         y = np.random.randint(minY, maxY)
         return x, y
 
     @abstractmethod
-    def define_num_classes(self):
+    def _define_num_classes_(self):
         return 1
 
     @abstractmethod
@@ -101,5 +101,25 @@ class TranslateGenerator(ABC, Dataset):
         pass
 
     @abstractmethod
+    def _get_my_item_(self, item, label):
+        return 1, 2, 3
+
+    def _finalize_get_item_(self, canvas, label, more):
+        return canvas, label, more
+
+    @abstractmethod
+    def _get_label_(self):
+        return 1
     def __getitem__(self, item):
-        pass
+        label = self._get_label_()
+        # _get_my_item should return a PIL image unless finalize_get_item is implemented and it does return a PIL image
+        canvas, label, more = self._get_my_item_(item, label)
+        # get my item must return a PIL image
+        canvas, label, more = self._finalize_get_item_(canvas, label, more)
+
+        if self.transform is not None:
+            canvas = self.transform(canvas)
+        else:
+            canvas = np.array(canvas)
+
+        return canvas, label, more
