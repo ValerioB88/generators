@@ -20,6 +20,11 @@ class LeekImagesFixed(FixedTranslationGenerator, LeekGenerator):
         FixedTranslationGenerator.__init__(self, grid_size, num_repetitions)
         LeekGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
 
+class LeekVisualDrop(VisualAcuityDropGenerator, LeekGenerator):
+    def __init__(self, blurring_coeff, folder, translation_type, middle_empty, background_color_type, name_generator = '', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+        VisualAcuityDropGenerator.__init__(self, blurring_coeff)
+        LeekGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+
 
 class LeekImagesFixedVisualDrop(FixedTranslationGenerator, VisualAcuityDropGenerator, LeekGenerator):
     def __init__(self, folder, grid_size, num_repetitions, blurred_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):

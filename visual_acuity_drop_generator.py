@@ -34,14 +34,8 @@ class VisualAcuityDropGenerator(TranslateGenerator):
 #     setattr(generator_class, 'blurring_coeff', blurring_coeff)
 #     return VisualAcuityDropGenerator
 
-class LeekVisualDrop(VisualAcuityDropGenerator, LeekGenerator):
-    def __init__(self, blurring_coeff, folder, translation_type, middle_empty, background_color_type, name_generator = '', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
-        VisualAcuityDropGenerator.__init__(self, blurring_coeff)
-        LeekGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
-
-
 def do_stuff():
-    leek_dataset = LeekVisualDrop(blurring_coeff=0.05, folder='./data/LeekImages_transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    leek_dataset = Leek(blurring_coeff=0.05, folder='./data/LeekImages_transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     # extended_class = extend_generator_with_visual_drop(FolderTranslationGenerator, blurring_coeff=0.25)
     # leek_dataset = extended_class('./data/LeekImages_transparent', TranslationType.WHOLE, background_color_type=BackGroundColorType.WHITE, middle_empty=False, grayscale=False, name_generator='dataLeek', size_object=np.array([50, 50]), size_canvas=(224, 224))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
