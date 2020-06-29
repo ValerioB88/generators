@@ -12,15 +12,15 @@ from generate_datasets.generators.folder_translation_generator import FolderTran
 import PIL.Image as Image
 from PIL import ImageFilter
 
-class VisualAcuityDropGeneratorMixin(TranslateGenerator):
+class VisualAcuityDropGeneratorMixin():
     def __init__(self, blurring_coeff):
         self.blurring_coeff = blurring_coeff
 
-    def _finalize_get_item_(self, canvas: Image, label, random_center):
-        super()._finalize_get_item_(canvas, label, random_center)
-        distance_from_center = np.linalg.norm(np.array(random_center) - np.array(self.size_canvas) / 2)
+    def _finalize_get_item_(self, canvas: Image, label, more):
+        canvas, label, more = super()._finalize_get_item_(canvas, label, more)
+        distance_from_center = np.linalg.norm(np.array(more) - np.array(self.size_canvas) / 2)
         canvas = canvas.filter(ImageFilter.GaussianBlur(distance_from_center * self.blurring_coeff))
-        return canvas, label, random_center
+        return canvas, label, more
 
 
 #

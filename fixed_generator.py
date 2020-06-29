@@ -7,7 +7,7 @@ from generate_datasets.generators.translate_generator import TranslateGenerator
 from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
 
-class FixedTranslationGeneratorMixin(TranslateGenerator):
+class FixedTranslationGeneratorMixin():
     def __init__(self, grid_size, num_repetitions):
         self.grid_size = grid_size
         self.num_repetitions = num_repetitions
@@ -36,7 +36,7 @@ class FixedTranslationGeneratorMixin(TranslateGenerator):
         return self.mesh_trX[self.current_index], self.mesh_trY[self.current_index]
 
     def _finalize_get_item_(self, canvas, label, more):
-        super()._finalize_get_item_(canvas, label, more)
+        canvas, label, more = super()._finalize_get_item_(canvas, label, more)
         self.current_index += 1
         return canvas, label, more
 
