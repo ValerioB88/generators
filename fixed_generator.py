@@ -7,7 +7,11 @@ from generate_datasets.generators.translate_generator import TranslateGenerator
 from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
 
+<<<<<<< HEAD
 class FixedTranslationGeneratorMixin():
+=======
+class FixedTranslationGeneratorMixin(TranslateGenerator):
+>>>>>>> 3d7b290a8b7f30c1987f12d8fac01cac0d43e855
     def __init__(self, grid_size, num_repetitions):
         self.grid_size = grid_size
         self.num_repetitions = num_repetitions
