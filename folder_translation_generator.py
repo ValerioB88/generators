@@ -34,9 +34,6 @@ class FolderTranslationGenerator(TranslateGenerator):
         self.minY = minY
         self.maxY = maxY
 
-    def __len__(self):
-        return 300000  # np.iinfo(np.int64).max
-
     def _get_translation_(self, label, image_name):
         return self._random_translation_(label, image_name)
 

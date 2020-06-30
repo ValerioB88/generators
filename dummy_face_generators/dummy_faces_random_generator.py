@@ -30,9 +30,6 @@ class DummyFaceRandomGenerator(TranslateGenerator):
     def _get_translation_(self, class_ID, image_name=None):
         return self._random_translation_(class_ID)
 
-    def __len__(self):
-        return 300000  # np.iinfo(np.int64).max
-
     def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label):
         return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=False, random_face_jitter=self.random_face_jitter)
 

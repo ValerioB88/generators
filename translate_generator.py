@@ -96,9 +96,8 @@ class TranslateGenerator(ABC, Dataset):
     def _define_num_classes_(self):
         return 1
 
-    @abstractmethod
     def __len__(self):
-        pass
+        return 300000  # np.iinfo(np.int64).max
 
     @abstractmethod
     def _get_my_item_(self, item, label):
