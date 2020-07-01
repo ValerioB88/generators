@@ -20,22 +20,12 @@ class FolderTranslationGenerator(TranslateGenerator):
         self.folder = folder
         if not os.path.exists(self.folder):
             assert False, 'Folder {} does not exist'.format(self.folder)
-        self.folder_basename = os.path.basename(os.path.normpath(self.folder))
         self.name_classes = [os.path.basename(i) for i in glob.glob(self.folder + '/**')]
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
 
     def _define_num_classes_(self):
         return len(self.name_classes)
-
-    def set_range_translation(self, minX, maxX, minY, maxY):
-        self.minX = minX
-        self.maxX = maxX
-        self.minY = minY
-        self.maxY = maxY
-
-    def _get_translation_(self, label, image_name):
-        return self._random_translation_(label, image_name)
 
     def _transpose_selected_image(self, image_name, label):
         image = Image.open(self.folder + '/' + image_name)
@@ -55,7 +45,25 @@ class FolderTranslationGenerator(TranslateGenerator):
         canvas, random_center = self._transpose_selected_image(name_class_selected, label)
         return canvas, label, random_center
 
+class MultiFoldersTranslationGenerator(FolderTranslationGenerator):
+    """
+    This generator is given directory which contains many folder, and each folder is a class.
+    """
+    def _get_my_item_(self, idx, label):
+        name_class_selected = self.name_classes[label]
+        image_name = name_class_selected + '/' + os.path.basename(np.random.choice(glob.glob(self.folder + '/' + name_class_selected + '/**.png')))
+        canvas, random_center = self._transpose_selected_image(image_name, label)
+        return canvas, label, random_center
+
+
 def do_stuff():
+    leek_dataset = MultiFoldersTranslationGenerator('./data/MNIST/png/training/', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
+
+    iterator = iter(dataloader)
+    img, lab, _ = next(iterator)
+    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+
     leek_dataset = FolderTranslationGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 

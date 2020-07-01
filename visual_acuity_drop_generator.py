@@ -11,7 +11,7 @@ from generate_datasets.generators.leek_generator import LeekGenerator
 from generate_datasets.generators.folder_translation_generator import FolderTranslationGenerator
 import PIL.Image as Image
 from PIL import ImageFilter
-
+import cv2
 
 class VisualAcuityDropGeneratorMixin(TranslateGenerator):
     def __init__(self, blurring_coeff):
@@ -21,6 +21,22 @@ class VisualAcuityDropGeneratorMixin(TranslateGenerator):
         super()._finalize_get_item_(canvas, label, more)
         distance_from_center = np.linalg.norm(np.array(more) - np.array(self.size_canvas) / 2)
         canvas = canvas.filter(ImageFilter.GaussianBlur(distance_from_center * self.blurring_coeff))
+        return canvas, label, more
+
+from external.Image_Foveation_Python.retina_transform import foveat_img
+class ImageFoveationGeneratorMixin:
+    def __init__(self, blurring_coeff=0.248):
+        self.blurring_coeff = blurring_coeff
+
+    def _finalize_get_item_(self, canvas: Image, label, more):
+        super()._finalize_get_item_(canvas, label, more)
+        # convert PIL to opencv
+        open_cv_image = np.array(canvas)
+        # Convert RGB to BGR
+        open_cv_image = open_cv_image[:, :, ::-1]
+        img_f = foveat_img(open_cv_image, sigma=self.blurring_coeff)
+        img = cv2.cvtColor(img_f, cv2.COLOR_BGR2RGB)
+        canvas = Image.fromarray(img)
         return canvas, label, more
 
 
@@ -36,16 +52,16 @@ class VisualAcuityDropGeneratorMixin(TranslateGenerator):
 #     setattr(generator_class, 'blurring_coeff', blurring_coeff)
 #     return VisualAcuityDropGenerator
 
-def do_stuff():
-    leek_dataset = Leek(blurring_coeff=0.05, folder='./data/LeekImages_transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
-    # extended_class = extend_generator_with_visual_drop(FolderTranslationGenerator, blurring_coeff=0.25)
-    # leek_dataset = extended_class('./data/LeekImages_transparent', TranslationType.WHOLE, background_color_type=BackGroundColorType.WHITE, middle_empty=False, grayscale=False, name_generator='dataLeek', size_object=np.array([50, 50]), size_canvas=(224, 224))
-    dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
-
-    iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+# def do_stuff():
+    # leek_dataset = Leek(blurring_coeff=0.05, folder='./data/LeekImages_transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    # # extended_class = extend_generator_with_visual_drop(FolderTranslationGenerator, blurring_coeff=0.25)
+    # # leek_dataset = extended_class('./data/LeekImages_transparent', TranslationType.WHOLE, background_color_type=BackGroundColorType.WHITE, middle_empty=False, grayscale=False, name_generator='dataLeek', size_object=np.array([50, 50]), size_canvas=(224, 224))
+    # dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
+    #
+    # iterator = iter(dataloader)
+    # img, lab, _ = next(iterator)
+    # vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
 
 if __name__ == '__main__':
     freeze_support()
-    do_stuff()
+    # do_stuff()

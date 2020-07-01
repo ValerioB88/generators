@@ -86,6 +86,9 @@ class TranslateGenerator(ABC, Dataset):
         else:
             self.transform = transforms.Compose([transforms.ToTensor(), normalize])
 
+    def _get_translation_(self, label, image_name=None):
+        return self._random_translation_(label, image_name)
+
     def _random_translation_(self, groupID, image_name=None):
         minX, maxX, minY, maxY = self.translations_range[groupID]
         x = np.random.randint(minX, maxX)

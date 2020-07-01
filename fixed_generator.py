@@ -9,8 +9,15 @@ import visualization.vis_utils as vis
 
 
 class FixedTranslationGeneratorMixin():
-
-    def __init__(self, grid_size, num_repetitions):
+    """
+        This mixin will disable the random generation, and it will generate samples at fixed locations of a canvas.
+        If shuffle is disabled, and num_repetitions is 1, it will pass through each translation, for each class at the time.
+        If num_repetitions = n, it will resample that class n times for each translation (useful when each object within a class is
+        itself randomly sampled).
+        This means that if a classes contains multiple and different elements (as it should), num_repetition should be set AT LEAST to that number of different elements. You won't have the guarantee that every element of that class is gonna be present for every translation. (I don't think it matters)
+        TODO: shuffle! But this is only important in training or in testing+batch_norm. If you use this in testing with a net without batch norm then it shouldn't matter.
+    """
+    def __init__(self, grid_size, num_repetitions=1):
         self.grid_size = grid_size
         self.num_repetitions = num_repetitions
         self.mesh_trX, self.mesh_trY, self.mesh_class, self.mesh_rep = [], [], [], []

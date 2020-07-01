@@ -26,14 +26,14 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             minY = int(size_object_y / 2 + sy)
             maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
-        if translation_type == TranslationType.RIGHT:
+        elif translation_type == TranslationType.RIGHT:
             # we use that magic pixel to make the values exactly the same when right or whole canvas
             minX = int(size_canvas[0] / 2 + ((size_object_x / 2) if middle_empty else 0) - 1)
             maxX = int(size_canvas[0] - size_object_x / 2 - sx)
             minY = int(size_object_y / 2 + sy)
             maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
-        if translation_type == TranslationType.WHOLE:
+        elif translation_type == TranslationType.WHOLE:
             minX = int(size_object_x / 2 + sx)
             maxX = int(size_canvas[0] - size_object_x / 2 - sx)
             # np.sum(x_grid < np.array(size_canvas)[0] / 2) == np.sum(x_grid > np.array(size_canvas)[0] / 2)
@@ -41,35 +41,44 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
         #
-        if translation_type == TranslationType.SMALL_AREA_RIGHT:
+        elif translation_type == TranslationType.SMALL_AREA_RIGHT:
             minX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (1 / 3))
             maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (2 / 3))
             minY = int(0 + (size_canvas[0] / 2) * (1 / 3))
             maxY = int(0 + (size_canvas[0] / 2) * (2 / 3))
 
-        if translation_type == TranslationType.VERY_SMALL_AREA_RIGHT:
+        elif translation_type == TranslationType.VERY_SMALL_AREA_RIGHT:
             minX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (4 / 10))
             maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (6 / 10))
             minY = int(0 + (size_canvas[0] / 2) * (4 / 10))
             maxY = int(0 + (size_canvas[0] / 2) * (6 / 10))
 
-        if translation_type == TranslationType.ONE_PIXEL:
+        elif translation_type == TranslationType.ONE_PIXEL:
             minX = int(size_canvas[1] * 0.74)
             maxX = int(size_canvas[1] * 0.74) + 1
             minY = int(size_canvas[0] * 0.25)
             maxY = int(size_canvas[0] * 0.25) + 1
 
-        if translation_type == TranslationType.CENTER_ONE_PIXEL:
+        elif translation_type == TranslationType.CENTER_ONE_PIXEL:
             minX = size_canvas[1] // 2
             maxX = size_canvas[1] // 2 + 1
             minY = size_canvas[0] // 2
             maxY = size_canvas[0] // 2 + 1
 
-        if translation_type == TranslationType.CENTER_SMALL_AREA:
+        elif translation_type == TranslationType.CENTER_SMALL_AREA:
             minX = size_canvas[1] // 2 - 10
             maxX = size_canvas[1] // 2 + 10
             minY = size_canvas[0] // 2 - 10
             maxY = size_canvas[0] // 2 + 10
+
+        elif translation_type == TranslationType.HLINE:
+            minX = size_object_x // 2
+            maxX = size_canvas[0] - size_object_x // 2
+            minY = size_canvas[1] // 2
+            maxY = size_canvas[1] // 2 + 1
+
+        else:
+            assert False, 'TranslationType not recognised'
 
 
     elif isinstance(translation_type, tuple) and len(translation_type) == 2:
@@ -135,6 +144,7 @@ class TranslationType(Enum):
     MULTI = 7
     CENTER_ONE_PIXEL = 8
     CENTER_SMALL_AREA = 9  # displaced by around 20 pixels
+    HLINE = 10
 
 class BackGroundColorType(Enum):
     WHITE = 0
