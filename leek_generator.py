@@ -23,13 +23,13 @@ class LeekGenerator(FolderTranslationGenerator):
         self.group['B'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SS.png')]
         return num_classes
 
-    def _get_label_(self):
+    def _get_label_(self, item):
         return np.random.randint(len(self.name_classes))
 
     def _get_my_item_(self, idx, label):
         name_class_selected = self.name_classes[label]
         choice_image = np.random.choice(self.group[name_class_selected])
-        canvas, random_center = self._transpose_selected_image(choice_image, label)
+        canvas, random_center = self._transpose_selected_image(choice_image, label, idx)
         return canvas, label, random_center
 
 import re

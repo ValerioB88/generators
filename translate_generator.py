@@ -86,7 +86,7 @@ class TranslateGenerator(ABC, Dataset):
         else:
             self.transform = transforms.Compose([transforms.ToTensor(), normalize])
 
-    def _get_translation_(self, label, image_name=None):
+    def _get_translation_(self, label, image_name=None, idx=None):
         return self._random_translation_(label, image_name)
 
     def _random_translation_(self, groupID, image_name=None):
@@ -97,25 +97,34 @@ class TranslateGenerator(ABC, Dataset):
 
     @abstractmethod
     def _define_num_classes_(self):
-        return 1
+        raise NotImplementedError
 
     def __len__(self):
         return 300000  # np.iinfo(np.int64).max
 
     @abstractmethod
     def _get_my_item_(self, item, label):
-        return 1, 2, 3
+        raise NotImplementedError
 
     def _finalize_get_item_(self, canvas, label, more):
         return canvas, label, more
 
     @abstractmethod
-    def _get_label_(self):
-        return 1
-    def __getitem__(self, item):
-        label = self._get_label_()
+    def _get_label_(self, idx):
+        raise NotImplementedError
+
+    def _prepare_get_item_(self):
+        pass
+
+    def __getitem__(self, idx):
+        """
+        @param idx: this is only used with 'Fixed' generators. Otherwise it doesn't mean anything to use an index for an infinite generator.
+        @return:
+        """
+        self._prepare_get_item_()
+        label = self._get_label_(idx)
         # _get_my_item should return a PIL image unless finalize_get_item is implemented and it does return a PIL image
-        canvas, label, more = self._get_my_item_(item, label)
+        canvas, label, more = self._get_my_item_(idx, label)
         # get my item must return a PIL image
         canvas, label, more = self._finalize_get_item_(canvas, label, more)
 

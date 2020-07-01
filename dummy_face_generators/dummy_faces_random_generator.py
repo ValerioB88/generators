@@ -30,17 +30,17 @@ class DummyFaceRandomGenerator(TranslateGenerator):
     def _call_draw_face(self, canvas, face_center, is_smiling, eyes_type, label):
         return draw_face(self.length_face, self.width_face, canvas, face_center, eyes_type=eyes_type, is_smiling=is_smiling, scrambled=False, random_face_jitter=self.random_face_jitter)
 
-    def get_img_id(self, face_id):
+    def get_img_id(self, face_id, idx):
         canvas = np.zeros(self.size_canvas, np.uint8) + get_background_color(self.background_color_type)
         is_smiling, eyes_type = from_group_ID_to_features(face_id)
-        face_center = self._get_translation_(face_id)
+        face_center = self._get_translation_(face_id, idx)
         canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, face_id)
         canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
         canvas = Image.fromarray(canvas)
 
         return canvas, face_center
 
-    def _get_label_(self):
+    def _get_label_(self, item):
         return int(np.random.choice(list(self.translations_range.keys())))
 
     def _get_my_item_(self, idx, label):

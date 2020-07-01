@@ -8,14 +8,13 @@ from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
 
 
-class FixedTranslationGeneratorMixin():
+class FiniteTranslationGeneratorMixin():
     """
         This mixin will disable the random generation, and it will generate samples at fixed locations of a canvas.
         If shuffle is disabled, and num_repetitions is 1, it will pass through each translation, for each class at the time.
         If num_repetitions = n, it will resample that class n times for each translation (useful when each object within a class is
         itself randomly sampled).
         This means that if a classes contains multiple and different elements (as it should), num_repetition should be set AT LEAST to that number of different elements. You won't have the guarantee that every element of that class is gonna be present for every translation. (I don't think it matters)
-        TODO: shuffle! But this is only important in training or in testing+batch_norm. If you use this in testing with a net without batch norm then it shouldn't matter.
     """
     def __init__(self, grid_size, num_repetitions=1):
         self.grid_size = grid_size
@@ -36,20 +35,20 @@ class FixedTranslationGeneratorMixin():
             self.mesh_rep.extend(r.flatten())
 
         self.save_stats()
-        self.current_index = 0
+        # self.current_index = 0
 
     def __len__(self):
         return len(self.mesh_trX)
 
-    def _get_translation_(self, label=None, image_name=None):
-        return self.mesh_trX[self.current_index], self.mesh_trY[self.current_index]
+    def _get_translation_(self, label=None, image_name=None, idx=None):
+        return self.mesh_trX[idx], self.mesh_trY[idx]
 
     def _finalize_get_item_(self, canvas, label, more):
         canvas, label, more = super()._finalize_get_item_(canvas, label, more)
-        self.current_index += 1
+        # self.current_index += 1
         return canvas, label, more
 
-    def _get_label_(self):
-        return self.mesh_class[self.current_index]
+    def _get_label_(self, item):
+        return self.mesh_class[item]
 
 
