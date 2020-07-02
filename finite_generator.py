@@ -33,6 +33,7 @@ class FiniteTranslationGeneratorMixin():
             self.mesh_trY.extend(y.flatten())
             self.mesh_class.extend(c.flatten())
             self.mesh_rep.extend(r.flatten())
+        print('Created Finite Dataset [{}] with {} elements'.format(self.name_generator, self.__len__()))
 
         self.save_stats()
         # self.current_index = 0

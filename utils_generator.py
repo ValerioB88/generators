@@ -17,6 +17,7 @@ def get_background_color(background_type):
 
 
 def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, middle_empty):
+    jitter = 10
     if isinstance(translation_type, TranslationType):
         sy = size_object_y / 10
         sx = size_object_x / 10
@@ -66,10 +67,10 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             maxY = size_canvas[0] // 2 + 1
 
         elif translation_type == TranslationType.CENTER_JITTERY:
-            minX = size_canvas[1] // 2 - 10
-            maxX = size_canvas[1] // 2 + 10
-            minY = size_canvas[0] // 2 - 10
-            maxY = size_canvas[0] // 2 + 10
+            minX = size_canvas[1] // 2 - jitter // 2
+            maxX = size_canvas[1] // 2 + jitter // 2
+            minY = size_canvas[0] // 2 - jitter // 2
+            maxY = size_canvas[0] // 2 + jitter // 2
 
         elif translation_type == TranslationType.HLINE:
             minX = size_object_x // 2
@@ -77,15 +78,15 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             minY = size_canvas[1] // 2
             maxY = size_canvas[1] // 2 + 1
         elif translation_type == TranslationType.LEFTMOST:  # add 10 pixels for possible jitter
-            minX = size_object_x // 2 + 10
-            maxX = size_object_x // 2 + 1 + 10
+            minX = size_object_x // 2 + jitter // 2
+            maxX = size_object_x // 2 + 1 + jitter // 2
             minY = size_canvas[1] // 2
             maxY = size_canvas[1] // 2 + 1
         elif translation_type == TranslationType.LEFTMOST_JITTERY:  # add 10 pixels for possible jitter
-            minX = size_object_x // 2 - 10
-            maxX = size_object_x // 2 + 1 + 10
-            minY = size_canvas[1] // 2 + 10
-            maxY = size_canvas[1] // 2 + 1 + 10
+            minX = size_object_x // 2
+            maxX = size_object_x // 2 + 20
+            minY = size_canvas[1] // 2 - jitter // 2
+            maxY = size_canvas[1] // 2 + jitter // 2
         else:
             assert False, 'TranslationType not recognised'
 
@@ -155,7 +156,7 @@ class TranslationType(Enum):
     CENTER_JITTERY = 9  # displaced by around 20 pixels
     HLINE = 10
     LEFTMOST = 11
-
+    LEFTMOST_JITTERY = 12
 
 class BackGroundColorType(Enum):
     WHITE = 0
