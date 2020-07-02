@@ -65,7 +65,7 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             minY = size_canvas[0] // 2
             maxY = size_canvas[0] // 2 + 1
 
-        elif translation_type == TranslationType.CENTER_SMALL_AREA:
+        elif translation_type == TranslationType.CENTER_JITTERY:
             minX = size_canvas[1] // 2 - 10
             maxX = size_canvas[1] // 2 + 10
             minY = size_canvas[0] // 2 - 10
@@ -76,7 +76,16 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             maxX = size_canvas[0] - size_object_x // 2
             minY = size_canvas[1] // 2
             maxY = size_canvas[1] // 2 + 1
-
+        elif translation_type == TranslationType.LEFTMOST:  # add 10 pixels for possible jitter
+            minX = size_object_x // 2 + 10
+            maxX = size_object_x // 2 + 1 + 10
+            minY = size_canvas[1] // 2
+            maxY = size_canvas[1] // 2 + 1
+        elif translation_type == TranslationType.LEFTMOST_JITTERY:  # add 10 pixels for possible jitter
+            minX = size_object_x // 2 - 10
+            maxX = size_object_x // 2 + 1 + 10
+            minY = size_canvas[1] // 2 + 10
+            maxY = size_canvas[1] // 2 + 1 + 10
         else:
             assert False, 'TranslationType not recognised'
 
@@ -143,8 +152,10 @@ class TranslationType(Enum):
     ONE_PIXEL = 6
     MULTI = 7
     CENTER_ONE_PIXEL = 8
-    CENTER_SMALL_AREA = 9  # displaced by around 20 pixels
+    CENTER_JITTERY = 9  # displaced by around 20 pixels
     HLINE = 10
+    LEFTMOST = 11
+
 
 class BackGroundColorType(Enum):
     WHITE = 0
