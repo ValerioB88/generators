@@ -63,14 +63,14 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title=lab)
+        vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = LeekImagesFiniteFoveationMixin(folder='./data/LeekImages_transparent', grid_size=10, num_repetitions=1, blurring_coeff=2, translation_type=TranslationType.HLINE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 
     translation_list = {0: TranslationType.LEFT,
@@ -80,7 +80,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         1: TranslationType.VERY_SMALL_AREA_RIGHT}
@@ -90,7 +90,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title=lab)
+        vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         1: TranslationType.RIGHT}
@@ -99,7 +99,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 
 if __name__ == '__main__':

@@ -30,7 +30,7 @@ class LeekGenerator(FolderTranslationGenerator):
         name_class_selected = self.name_classes[label]
         choice_image = np.random.choice(self.group[name_class_selected])
         canvas, random_center = self._transpose_selected_image(choice_image, label, idx)
-        return canvas, label, random_center
+        return canvas, label, {'center': random_center, 'image_name': choice_image}
 
 import re
 class LeekGeneratorDoubleSide(LeekGenerator):
@@ -41,7 +41,7 @@ class LeekGeneratorDoubleSide(LeekGenerator):
         self.num_images_in_folder = None
         # establish which half goes to the which side. Use 0 for training, 1 for testing. If type_double==0, the first half is swapped side. If type_double==1, the second half.
         self.type_double = type_double
-        super(LeekGeneratorDoubleSide, self).__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+        super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
 
     def _finalize_init_(self):
         self.num_images_in_folder = len(glob.glob(self.folder + '/**.png'))
@@ -53,38 +53,39 @@ class LeekGeneratorDoubleSide(LeekGenerator):
         y = np.random.randint(minY, maxY)
         num = int(re.sub(r"\D", "", image_name))
         if (self.type_double and num > self.num_images_in_folder // 4) or \
-           (not self.type_double and num <= self.num_images_in_folder // 4):  # it's 4 and not 2 because of the way the images are numbered
+           (not self.type_double and num <= self.num_images_in_folder // 4):  # it's 4 and not 2 because of the way the images are numbered (from 1 to 12)
                 x = self.size_canvas[0] // 2 - (x - self.size_canvas[0] // 2)
         return x, y
 
 def do_stuff():
-    leek_dataset = LeekGeneratorDoubleSide('./data/LeekImages_transparent', (198, 112), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50), type_double=1)
+    leek_dataset = LeekGeneratorDoubleSide('./data/LeekImages_transparent', (198, 112), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50), type_double=0)
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+    img, lab, more = next(iterator)
+
+    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=os.path.splitext(lab)[0], title_more=more['image_name'])
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150, 223, 224), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title=lab)
+    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 if __name__ == '__main__':
     freeze_support()
