@@ -25,8 +25,8 @@ class FiniteTranslationGeneratorMixin():
     def _finalize_init_(self):
         for groupID in range(self.num_classes):
             minX, maxX, minY, maxY = self.translations_range[groupID]
-            x, y, c, r = np.meshgrid(np.arange(minX, maxX, self.grid_size),
-                                     np.arange(minY, maxY, self.grid_size),
+            x, y, c, r = np.meshgrid(np.arange(minX, maxX + self.grid_size, self.grid_size),
+                                     np.arange(minY, maxY + self.grid_size, self.grid_size),
                                      groupID,
                                      np.arange(self.num_repetitions))
             self.mesh_trX.extend(x.flatten())
