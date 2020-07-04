@@ -20,8 +20,10 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
     # translation here is always [minX, maxX), [minY, maxY)
     jitter = 20
     if isinstance(translation_type, TranslationType):
-        sy = size_object_y / 10
-        sx = size_object_x / 10
+        # sy = size_object_y / 10
+        # sx = size_object_x / 10
+        sx = 0
+        sy = 0
         if translation_type == TranslationType.LEFT:
             minX = int(size_object_x / 2 + sx)
             maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0)) + 1
