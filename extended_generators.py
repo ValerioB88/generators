@@ -56,7 +56,7 @@ def do_stuff():
     #
     # for i, data in enumerate(dataloader):
     #     img, lab, _ = data
-    #     vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title=lab)
+    #     vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
 
     mnist_dataset = MultiFolderFiniteFoveationMixin(folder='./data/MNIST/png/training', grid_size=10, num_repetitions=2, blurring_coeff=2, translation_type=TranslationType.HLINE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=1)

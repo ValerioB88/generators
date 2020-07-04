@@ -17,42 +17,43 @@ def get_background_color(background_type):
 
 
 def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, middle_empty):
+    # translation here is always [minX, maxX), [minY, maxY)
     jitter = 20
     if isinstance(translation_type, TranslationType):
         sy = size_object_y / 10
         sx = size_object_x / 10
         if translation_type == TranslationType.LEFT:
             minX = int(size_object_x / 2 + sx)
-            maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0))
+            maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0)) + 1
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
 
         elif translation_type == TranslationType.RIGHT:
             # we use that magic pixel to make the values exactly the same when right or whole canvas
             minX = int(size_canvas[0] / 2 + ((size_object_x / 2) if middle_empty else 0) - 1)
-            maxX = int(size_canvas[0] - size_object_x / 2 - sx)
+            maxX = int(size_canvas[0] - size_object_x / 2 - sx) + 1
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
 
         elif translation_type == TranslationType.WHOLE:
             minX = int(size_object_x / 2 + sx)
-            maxX = int(size_canvas[0] - size_object_x / 2 - sx)
+            maxX = int(size_canvas[0] - size_object_x / 2 - sx) + 1
             # np.sum(x_grid < np.array(size_canvas)[0] / 2) == np.sum(x_grid > np.array(size_canvas)[0] / 2)
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
 
         #
         elif translation_type == TranslationType.SMALL_AREA_RIGHT:
             minX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (1 / 3))
-            maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (2 / 3))
+            maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (2 / 3)) + 1
             minY = int(0 + (size_canvas[0] / 2) * (1 / 3))
-            maxY = int(0 + (size_canvas[0] / 2) * (2 / 3))
+            maxY = int(0 + (size_canvas[0] / 2) * (2 / 3)) + 1
 
         elif translation_type == TranslationType.VERY_SMALL_AREA_RIGHT:
             minX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (4 / 10))
-            maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (6 / 10))
+            maxX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (6 / 10)) + 1
             minY = int(0 + (size_canvas[0] / 2) * (4 / 10))
-            maxY = int(0 + (size_canvas[0] / 2) * (6 / 10))
+            maxY = int(0 + (size_canvas[0] / 2) * (6 / 10)) + 1
 
         elif translation_type == TranslationType.ONE_PIXEL:
             minX = int(size_canvas[1] * 0.74)
@@ -68,13 +69,13 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
 
         elif translation_type == TranslationType.CENTER_JITTERY:
             minX = size_canvas[1] // 2 - jitter // 2
-            maxX = size_canvas[1] // 2 + jitter // 2
+            maxX = size_canvas[1] // 2 + jitter // 2 + 1
             minY = size_canvas[0] // 2 - jitter // 2
-            maxY = size_canvas[0] // 2 + jitter // 2
+            maxY = size_canvas[0] // 2 + jitter // 2 + 1
 
         elif translation_type == TranslationType.HLINE:
             minX = size_object_x // 2
-            maxX = size_canvas[0] - size_object_x // 2
+            maxX = size_canvas[0] - size_object_x // 2 + 1
             minY = size_canvas[1] // 2
             maxY = size_canvas[1] // 2 + 1
         elif translation_type == TranslationType.LEFTMOST:  # add 10 pixels for possible jitter
@@ -84,9 +85,9 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             maxY = size_canvas[1] // 2 + 1
         elif translation_type == TranslationType.LEFTMOST_JITTERY:  # add 10 pixels for possible jitter
             minX = size_object_x // 2
-            maxX = size_object_x // 2 + 2 * jitter
+            maxX = size_object_x // 2 + 2 * jitter + 1
             minY = size_canvas[1] // 2 - jitter
-            maxY = size_canvas[1] // 2 + jitter
+            maxY = size_canvas[1] // 2 + jitter + 1
         else:
             assert False, 'TranslationType not recognised'
 
