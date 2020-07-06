@@ -6,7 +6,7 @@ from generate_datasets.generators.dummy_face_generators.dummy_faces_random_gener
 from generate_datasets.generators.translate_generator import TranslateGenerator
 from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
-from generate_datasets.generators.folder_translation_generator import MultiFoldersTranslationGenerator
+from generate_datasets.generators.folder_translation_generator import MultiFoldersTranslationGenerator, FolderTranslationGenerator
 from generate_datasets.generators.finite_generator import FiniteTranslationGeneratorMixin
 from generate_datasets.generators.visual_acuity_drop_generator import VisualAcuityDropGeneratorMixin, ImageFoveationGeneratorMixin
 
@@ -49,6 +49,18 @@ class MultiFolderFoveationMixin(ImageFoveationGeneratorMixin, MultiFoldersTransl
     def __init__(self, folder, blurring_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
         MultiFoldersTranslationGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+
+class FolderFiniteFoveationMixin(FiniteTranslationGeneratorMixin, ImageFoveationGeneratorMixin, FolderTranslationGenerator):
+    def __init__(self, folder, grid_size, num_repetitions, blurring_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+        FiniteTranslationGeneratorMixin.__init__(self, grid_size, num_repetitions)
+        ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
+        FolderTranslationGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+
+class FolderFoveationMixin(ImageFoveationGeneratorMixin, FolderTranslationGenerator):
+    def __init__(self, folder, blurring_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+        ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
+        FolderTranslationGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+
 
 def do_stuff():
     # mnist_dataset = MultiFolderFoveationMixin(folder='./data/MNIST/png/training', blurring_coeff=2, translation_type=TranslationType.HLINE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))

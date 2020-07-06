@@ -20,7 +20,7 @@ class FolderTranslationGenerator(TranslateGenerator):
         self.folder = folder
         if not os.path.exists(self.folder):
             assert False, 'Folder {} does not exist'.format(self.folder)
-        self.name_classes = [os.path.basename(i) for i in glob.glob(self.folder + '/**')]
+        self.name_classes = [os.path.basename(i) for i in np.sort(glob.glob(self.folder + '/**'))]
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
 

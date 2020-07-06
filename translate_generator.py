@@ -16,7 +16,6 @@ class TranslateGenerator(ABC, Dataset):
         """
         self.transform = None
         self.translation_type = translation_type
-        self.size_object = 60
         self.middle_empty = middle_empty
         self.name_generator = name_generator
         self.background_color_type = background_color_type
