@@ -45,6 +45,13 @@ class MultiFolderFiniteFoveationMixin(FiniteTranslationGeneratorMixin, ImageFove
         ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
         MultiFoldersTranslationGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
 
+class MultiFolderFiniteMixin(FiniteTranslationGeneratorMixin, MultiFoldersTranslationGenerator):
+    def __init__(self, folder, grid_size, num_repetitions, blurring_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+        FiniteTranslationGeneratorMixin.__init__(self, grid_size, num_repetitions)
+        ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
+        MultiFoldersTranslationGenerator.__init__(self, folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+
+
 class MultiFolderFoveationMixin(ImageFoveationGeneratorMixin, MultiFoldersTranslationGenerator):
     def __init__(self, folder, blurring_coeff, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         ImageFoveationGeneratorMixin.__init__(self, blurring_coeff)
