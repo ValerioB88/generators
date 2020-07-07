@@ -27,11 +27,14 @@ class FolderTranslationGenerator(TranslateGenerator):
     def _define_num_classes_(self):
         return len(self.name_classes)
 
-    def _transpose_selected_image(self, image_name, label, idx):
-        image = Image.open(self.folder + '/' + image_name)
+    def _resize(self, image):
         if self.size_object is not None:
             image = image.resize(self.size_object)
+        return image
 
+    def _transpose_selected_image(self, image_name, label, idx):
+        image = Image.open(self.folder + '/' + image_name)
+        image = self._resize(image)
         random_center = self._get_translation_(label, image_name, idx)
         image_in_canvas = utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
 
@@ -57,12 +60,12 @@ class MultiFoldersTranslationGenerator(FolderTranslationGenerator):
 
 
 def do_stuff():
-    multi_folder_mnist = MultiFoldersTranslationGenerator('./data/MNIST/png/training/', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
-    dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
-
-    iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    vis.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
+    # multi_folder_mnist = MultiFoldersTranslationGenerator('./data/MNIST/png/training/', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    # dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
+    #
+    # iterator = iter(dataloader)
+    # img, lab, _ = next(iterator)
+    # vis.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
 
     leek_dataset = FolderTranslationGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
