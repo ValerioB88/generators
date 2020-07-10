@@ -29,20 +29,21 @@ class TranslateGenerator(ABC, Dataset):
         def translation_type_to_str(translation_type):
             return str.lower(str.split(str(translation_type), '.')[1]) if isinstance(translation_type, TranslationType) else "_".join(str(translation_type).split(", "))
 
+        size_object = self.size_object if self.size_object is not None else (0, 0)
         if isinstance(self.translation_type, dict):
             self.translation_type_str = "".join(["".join([str(k), translation_type_to_str(v)]) for k, v in self.translation_type.items()])
             if len(self.translation_type_str) > 250:
                 self.translation_type_str = 'multi_long'
             assert len(self.translation_type) == self.num_classes
             for idx, transl in self.translation_type.items():
-                self.translations_range[idx] = get_range_translation(transl, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
+                self.translations_range[idx] = get_range_translation(transl, size_object[1], self.size_canvas, size_object[0], self.middle_empty)
 
         # Same translation type for all classes
         # can be TranslationType, tuple (X, Y) or tuple of (minX, maxX, minY, maxY)
         if not isinstance(self.translation_type, dict):
             self.translation_type_str = translation_type_to_str(self.translation_type)
             for idx in range(self.num_classes):
-                self.translations_range[idx] = get_range_translation(self.translation_type, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
+                self.translations_range[idx] = get_range_translation(self.translation_type, size_object[1], self.size_canvas, size_object[0], self.middle_empty)
 
         self._finalize_init_()
 
