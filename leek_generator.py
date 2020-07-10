@@ -2,13 +2,13 @@ import os
 import glob
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
-from generate_datasets.generators.folder_translation_generator import FolderTranslationGenerator
+from generate_datasets.generators.folder_translation_generator import FolderGen
 from torch.utils.data import DataLoader
 import visualization.vis_utils as vis
 from multiprocessing.dummy import freeze_support
 
 
-class LeekGenerator(FolderTranslationGenerator):
+class LeekGenerator(FolderGen):
     """
     This generator takes a leek folder, and split them in two according to their name (ending in SD or SS)
     """

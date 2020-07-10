@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
 from generate_datasets.generators.utils_generator import get_range_translation, TranslationType
 import pathlib
-import pickle
 import os
 import filecmp
 import numpy as np
+import cloudpickle
 
 class TranslateGenerator(ABC, Dataset):
     def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
@@ -54,7 +54,7 @@ class TranslateGenerator(ABC, Dataset):
         filename = '{}_tr_[{}]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.translation_type_str, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
         if os.path.exists('./data/generators/{}'.format(filename)) and os.path.exists('./data/generators/stats_{}'.format(filename)):
             with open('./data/generators/tmp_{}'.format(filename), 'wb') as f:
-                pickle.dump(self, f)
+                cloudpickle.dump(self, f)
             # check if the files are the same
             if filecmp.cmp('./data/generators/{}'.format(filename), './data/generators/{}'.format(filename)):
                 compute_mean_std = False
@@ -64,13 +64,13 @@ class TranslateGenerator(ABC, Dataset):
 
         else:
             with open('./data/generators/{}'.format(filename), 'wb') as f:
-                pickle.dump(self, f)
+                cloudpickle.dump(self, f)
             compute_mean_std = True
 
         if compute_mean_std:
             self.stats = compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename))
         else:
-            self.stats = pickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
+            self.stats = cloudpickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
         if self.grayscale:
             mean = [self.stats['mean'][0]]
             std = [self.stats['std'][0]]

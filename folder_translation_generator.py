@@ -12,10 +12,10 @@ from generate_datasets.generators.utils_generator import TranslationType, BackGr
 import utils
 from generate_datasets.generators.translate_generator import TranslateGenerator
 
-class FolderTranslationGenerator(TranslateGenerator):
-    '''
+class FolderGen(TranslateGenerator):
+    """
     This generator is given a folder with images inside, and each image is treated as a different class.
-    '''
+    """
     def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         self.folder = folder
         if not os.path.exists(self.folder):
@@ -48,7 +48,7 @@ class FolderTranslationGenerator(TranslateGenerator):
         canvas, random_center = self._transpose_selected_image(name_class_selected, label, idx)
         return canvas, label, {'center': random_center}
 
-class MultiFoldersTranslationGenerator(FolderTranslationGenerator):
+class MultiFoldersGen(FolderGen):
     """
     This generator is given directory which contains many folder, and each folder is a class.
     """
@@ -67,7 +67,7 @@ def do_stuff():
     # img, lab, _ = next(iterator)
     # vis.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
 
-    leek_dataset = FolderTranslationGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    leek_dataset = FolderGen('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

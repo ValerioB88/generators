@@ -33,7 +33,7 @@ class DummyFaceRandomGenerator(TranslateGenerator):
     def get_img_id(self, face_id, idx):
         canvas = np.zeros(self.size_canvas, np.uint8) + get_background_color(self.background_color_type)
         is_smiling, eyes_type = from_group_ID_to_features(face_id)
-        face_center = self._get_translation_(face_id, idx)
+        face_center = self._get_translation_(face_id, canvas, idx)
         canvas = self._call_draw_face(canvas, face_center, is_smiling, eyes_type, face_id)
         canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
         canvas = Image.fromarray(canvas)
@@ -44,7 +44,7 @@ class DummyFaceRandomGenerator(TranslateGenerator):
         return int(np.random.choice(list(self.translations_range.keys())))
 
     def _get_my_item_(self, idx, label):
-        canvas, face_center = self.get_img_id(label)
+        canvas, face_center = self.get_img_id(label, idx)
         label = list(self.translations_range.keys()).index(label)
         return canvas, label, {'center': face_center}
 
