@@ -45,7 +45,7 @@ class LeekGeneratorDoubleSide(LeekGenerator):
 
     def _finalize_init_(self):
         self.num_images_in_folder = len(glob.glob(self.folder + '/**.png'))
-        super(LeekGeneratorDoubleSide, self)._finalize_init_()
+        super()._finalize_init_()
 
     def _random_translation_(self, groupID, image_name=None):
         minX, maxX, minY, maxY = self.translations_range[groupID]
