@@ -6,7 +6,7 @@ from generate_datasets.generators.dummy_face_generators.dummy_faces_random_gener
 from generate_datasets.generators.translate_generator import TranslateGenerator
 from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
-from generate_datasets.generators.folder_translation_generator import MultiFoldersGen, FolderGen
+from generate_datasets.generators.folder_translation_generator import FolderGen
 import PIL.Image as Image
 from PIL import ImageFilter
 from external.Image_Foveation_Python.retina_transform import foveat_img

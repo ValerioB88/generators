@@ -20,6 +20,12 @@ class FolderGen(TranslateGenerator):
         self.folder = folder
         if not os.path.exists(self.folder):
             assert False, 'Folder {} does not exist'.format(self.folder)
+        if np.all([os.path.splitext(i)[1] == '.png' for i in glob.glob(self.folder + '/**')]):
+            self.multi_folder = False
+        elif np.all([os.path.splitext(i)[1] == '' for i in glob.glob(self.folder + '/**')]):
+            self.multi_folder = True
+        else:
+            assert False, "Either provide a folder with only images or a folder with only folder (classes)"
         self.name_classes = [os.path.basename(i) for i in np.sort(glob.glob(self.folder + '/**'))]
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
@@ -44,17 +50,10 @@ class FolderGen(TranslateGenerator):
         return np.random.randint(len(self.name_classes))
 
     def _get_my_item_(self, idx, label):
-        name_class_selected = self.name_classes[label]
-        canvas, random_center = self._transpose_selected_image(name_class_selected, label, idx)
-        return canvas, label, {'center': random_center}
+        image_name = self.name_classes[label]
+        if self.multi_folder:
+            image_name = image_name + '/' + os.path.basename(np.random.choice(glob.glob(self.folder + '/' + image_name + '/**.png')))
 
-class MultiFoldersGen(FolderGen):
-    """
-    This generator is given directory which contains many folder, and each folder is a class.
-    """
-    def _get_my_item_(self, idx, label):
-        name_class_selected = self.name_classes[label]
-        image_name = name_class_selected + '/' + os.path.basename(np.random.choice(glob.glob(self.folder + '/' + name_class_selected + '/**.png')))
         canvas, random_center = self._transpose_selected_image(image_name, label, idx)
         return canvas, label, {'center': random_center}
 
