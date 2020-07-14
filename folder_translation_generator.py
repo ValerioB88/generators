@@ -35,6 +35,9 @@ class FolderGen(TranslateGenerator):
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
 
+    def _finalize_init_(self):
+        super()._finalize_init_()
+        print('Created Dataset from folder: {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder'))
     def _define_num_classes_(self):
         return len(self.name_classes)
 
