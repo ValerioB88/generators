@@ -26,23 +26,23 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
         sy = 0
         if translation_type == TranslationType.LEFT:
             minX = int(size_object_x / 2 + sx)
-            maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0)) + 1
+            maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0))
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
         elif translation_type == TranslationType.RIGHT:
             # we use that magic pixel to make the values exactly the same when right or whole canvas
             minX = int(size_canvas[0] / 2 + ((size_object_x / 2) if middle_empty else 0) - 1)
-            maxX = int(size_canvas[0] - size_object_x / 2 - sx) + 1
+            maxX = int(size_canvas[0] - size_object_x / 2 - sx)
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
         elif translation_type == TranslationType.WHOLE:
             minX = int(size_object_x / 2 + sx)
-            maxX = int(size_canvas[0] - size_object_x / 2 - sx) + 1
+            maxX = int(size_canvas[0] - size_object_x / 2 - sx)
             # np.sum(x_grid < np.array(size_canvas)[0] / 2) == np.sum(x_grid > np.array(size_canvas)[0] / 2)
             minY = int(size_object_y / 2 + sy)
-            maxY = int(size_canvas[1] - size_object_y / 2 - sy) + 1
+            maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
         #
         elif translation_type == TranslationType.SMALL_AREA_RIGHT:
