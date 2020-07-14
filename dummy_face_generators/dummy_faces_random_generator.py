@@ -19,7 +19,7 @@ class DummyFaceRandomGenerator(TranslateGenerator):
         self.random_face_jitter = random_face_jitter
         self.random_gray_face = random_gray_face
         self.length_face = length_face
-        self.width_face = self.length_face * 0.8125
+        self.width_face = int(self.length_face * 0.8125)
         self.size_object = (self.width_face, self.length_face)
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, self.size_object)
