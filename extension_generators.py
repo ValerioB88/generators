@@ -147,9 +147,13 @@ def do_stuff():
     mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
-    for i, data in enumerate(dataloader):
-        img, lab, _ = data
-        vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+    # for i, data in enumerate(dataloader):
+    #     img, lab, _ = data
+    #     vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+
+    extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
+    mnist_dataset = extended_class(folder='./data/LeekImages/transparenc', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
+    dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
     extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
                                              base_class=foveate_extension(blurring_coeff=1.5,

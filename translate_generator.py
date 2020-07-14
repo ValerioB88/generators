@@ -53,22 +53,17 @@ class TranslateGenerator(ABC, Dataset):
     def save_stats(self):
         pathlib.Path('./data/generators/').mkdir(parents=True, exist_ok=True)
         filename = '{}_tr_[{}]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.translation_type_str, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
+
         if os.path.exists('./data/generators/{}'.format(filename)) and os.path.exists('./data/generators/stats_{}'.format(filename)):
-            with open('./data/generators/tmp_{}'.format(filename), 'wb') as f:
-                cloudpickle.dump(self, f)
-            # check if the files are the same
-            if filecmp.cmp('./data/generators/{}'.format(filename), './data/generators/tmp_{}'.format(filename)):
+            if cloudpickle.load(open('./data/generators/{}'.format(filename), 'rb')).__dict__ == self.__dict__:
                 compute_mean_std = False
             else:
                 compute_mean_std = True
-            os.remove('./data/generators/tmp_{}'.format(filename))
-
         else:
-            with open('./data/generators/{}'.format(filename), 'wb') as f:
-                cloudpickle.dump(self, f)
             compute_mean_std = True
 
         if compute_mean_std:
+            cloudpickle.dump(self, open('./data/generators/{}'.format(filename), 'wb'))
             self.stats = compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename))
         else:
             self.stats = cloudpickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
