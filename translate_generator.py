@@ -57,7 +57,7 @@ class TranslateGenerator(ABC, Dataset):
             with open('./data/generators/tmp_{}'.format(filename), 'wb') as f:
                 cloudpickle.dump(self, f)
             # check if the files are the same
-            if filecmp.cmp('./data/generators/{}'.format(filename), './data/generators/{}'.format(filename)):
+            if filecmp.cmp('./data/generators/{}'.format(filename), './data/generators/tmp_{}'.format(filename)):
                 compute_mean_std = False
             else:
                 compute_mean_std = True
