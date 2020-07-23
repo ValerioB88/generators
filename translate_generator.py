@@ -104,12 +104,16 @@ class TranslateGenerator(ABC, Dataset):
     def _finalize_get_item_(self, canvas, label, more):
         return canvas, label, more
 
-    @abstractmethod
     def _get_label_(self, idx):
-        raise NotImplementedError
+        return np.random.randint(self.num_classes)
 
     def _prepare_get_item_(self):
         pass
+
+    def _resize_(self, image):
+        if self.size_object is not None:
+            image = image.resize(self.size_object)
+        return image
 
     def __getitem__(self, idx):
         """

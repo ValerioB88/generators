@@ -41,21 +41,13 @@ class FolderGen(TranslateGenerator):
     def _define_num_classes_(self):
         return len(self.name_classes)
 
-    def _resize(self, image):
-        if self.size_object is not None:
-            image = image.resize(self.size_object)
-        return image
-
     def _transpose_selected_image(self, image_name, label, idx):
         image = Image.open(self.folder + '/' + image_name)
-        image = self._resize(image)
+        image = self._resize_(image)
         random_center = self._get_translation_(label, image_name, idx)
         image_in_canvas = utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
 
         return image_in_canvas, random_center
-
-    def _get_label_(self, idx):
-        return np.random.randint(len(self.name_classes))
 
     def _get_my_item_(self, idx, label):
         image_name = self.name_classes[label]
@@ -67,7 +59,7 @@ class FolderGen(TranslateGenerator):
 
 
 def do_stuff():
-    multi_folder_mnist = FolderGen('./data/MNIST/png/training/', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    multi_folder_mnist = FolderGen('./data/MNIST/png/training/', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
     dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
