@@ -56,7 +56,7 @@ class VertLineGenerator(TranslateGenerator):
 
 
 def do_stuff():
-    vert_gen = VertLineGenerator((1, 2, 40, 30), TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='vert_line', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    vert_gen = VertLineGenerator((40, 41), TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='vert_line', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(vert_gen, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
