@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torchvision import utils
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
-
+from generate_datasets.generators.extension_generators import finite_extension
 import utils
 from generate_datasets.generators.translate_generator import TranslateGenerator
 import copy
@@ -28,12 +28,9 @@ class VertLineGenerator(TranslateGenerator):
     def _define_num_classes_(self):
         return len(self.size_lines)
 
-    def _get_label_(self, idx):
-        self.trial_lines = np.random.permutation(np.array(self.size_lines))
-        return np.argmax(self.trial_lines)
-
     def _get_canvas_vert_lines_(self, label):
         canvas = np.zeros(self.size_object, np.uint8) + get_background_color(self.background_color_type)
+        self.trial_lines = np.insert(np.random.permutation([i for idx,i in enumerate(self.size_lines) if i != np.max(self.size_lines)]), label, np.max(self.size_lines))
         for idx, l in enumerate(self.trial_lines):
             canvas[(self.size_object[1] - l) // 2:
                    (self.size_object[1] + l) // 2, (self.size_object[1] // (len(self.trial_lines) + 1)) * (idx + 1)] = 254
@@ -56,7 +53,9 @@ class VertLineGenerator(TranslateGenerator):
 
 
 def do_stuff():
-    vert_gen = VertLineGenerator((40, 41), TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='vert_line', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    test_generator = finite_extension(grid_step_size=10, num_repetitions=10, base_class=VertLineGenerator)
+
+    vert_gen = test_generator((1, 2, 40, 41), TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='vert_line', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(vert_gen, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
