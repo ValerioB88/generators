@@ -50,6 +50,9 @@ class TranslateGenerator(ABC, Dataset):
     def _finalize_init_(self):
         self.save_stats()
 
+    def call_compute_stat(self, filename):
+        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename))
+
     def save_stats(self):
         pathlib.Path('./data/generators/').mkdir(parents=True, exist_ok=True)
         filename = '{}_tr_[{}]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.translation_type_str, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
@@ -64,7 +67,7 @@ class TranslateGenerator(ABC, Dataset):
 
         if compute_mean_std:
             cloudpickle.dump(self, open('./data/generators/{}'.format(filename), 'wb'))
-            self.stats = compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename))
+            self.stats = self.call_compute_stat(filename)
         else:
             self.stats = cloudpickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
         if self.grayscale:
