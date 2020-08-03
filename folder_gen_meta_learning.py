@@ -1,4 +1,6 @@
 from multiprocessing.dummy import freeze_support
+
+import framework_utils
 from visualization import vis_utils as vis
 from generate_datasets.generators.utils_generator import get_range_translation
 from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
@@ -87,7 +89,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
 
     sampler = partial(NShotTaskSampler, n=3, k=2, q=2)
     multi_folder_omniglot = FolderGenMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
@@ -95,7 +97,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
 
 
 if __name__ == '__main__':

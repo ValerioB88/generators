@@ -76,21 +76,21 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
 
     leek_dataset = FolderGen('./data/LeekImages/transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = FolderGen('./data/LeekImages/grouped', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 
 if __name__ == '__main__':

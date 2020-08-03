@@ -1,6 +1,8 @@
 from multiprocessing.dummy import freeze_support
 from torch.utils.data import DataLoader
 import numpy as np
+
+import framework_utils
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from generate_datasets.generators.leek_generator import LeekGenerator
 import visualization.vis_utils as vis
@@ -164,7 +166,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         1: TranslationType.RIGHT}
@@ -175,7 +177,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+        framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 
 if __name__ == '__main__':

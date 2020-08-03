@@ -1,5 +1,7 @@
 from multiprocessing.dummy import freeze_support
 import PIL.Image as Image
+
+import framework_utils
 from visualization import vis_utils as vis
 from torch.utils.data import DataLoader
 import numpy as np
@@ -74,7 +76,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
 
     dataset = DummyFaceRandomGenerator(TranslationType.LEFT, middle_empty=True, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
@@ -82,7 +84,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         4: TranslationType.ONE_PIXEL,
@@ -92,14 +94,14 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     dataset = DummyFaceRandomGenerator((10, 51), middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     scrambling_list = {0: False,
                        5: True}
@@ -111,7 +113,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: (10, 20),
                         4: (100, 20),
@@ -121,7 +123,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
     translation_list = {0: (10, 20, 11, 21),
                         4: (0, 120, 200, 201),
@@ -131,7 +133,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
 if __name__ == '__main__':
     freeze_support()

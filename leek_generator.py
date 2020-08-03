@@ -1,6 +1,8 @@
 import os
 import glob
 import numpy as np
+
+import framework_utils
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from generate_datasets.generators.folder_translation_generator import FolderGen
 from torch.utils.data import DataLoader
@@ -64,28 +66,28 @@ def do_stuff():
     iterator = iter(dataloader)
     img, lab, more = next(iterator)
 
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=os.path.splitext(lab)[0], title_more=more['image_name'])
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=os.path.splitext(lab)[0], title_more=more['image_name'])
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150, 223, 224), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
 if __name__ == '__main__':
     freeze_support()

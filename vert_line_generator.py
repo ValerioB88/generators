@@ -10,10 +10,8 @@ from generate_datasets.generators.extension_generators import finite_extension
 from generate_datasets.generators.translate_generator import TranslateGenerator
 import copy
 
+
 class VertLineGenerator(TranslateGenerator):
-    """
-    This generator is given a folder with images inside, and each image is treated as a different class.
-    """
     def __init__(self, size_lines: list, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         # Label indicates the position of the longest one, that is: label = 0, the first one is the longest
         self.size_lines = size_lines
@@ -58,7 +56,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    vis.imshow_batch(img, vert_gen.stats['mean'], vert_gen.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, vert_gen.stats['mean'], vert_gen.stats['std'], title_lab=lab)
 
 if __name__ == '__main__':
     freeze_support()
