@@ -1,17 +1,15 @@
-import os
 from multiprocessing.dummy import freeze_support
+import framework_utils
 from visualization import vis_utils as vis
-import glob
 import PIL.Image as Image
 
 from torch.utils.data import DataLoader
-from torchvision import utils
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
 from generate_datasets.generators.extension_generators import finite_extension
-import utils
 from generate_datasets.generators.translate_generator import TranslateGenerator
 import copy
+
 class VertLineGenerator(TranslateGenerator):
     """
     This generator is given a folder with images inside, and each image is treated as a different class.
@@ -42,7 +40,7 @@ class VertLineGenerator(TranslateGenerator):
     def _transpose_selected_image(self, canvas, label, idx):
         image = self._resize_(canvas)
         random_center = self._get_translation_(label, None, None)
-        image_in_canvas = utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
+        image_in_canvas = framework_utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
         return image_in_canvas, random_center
 
 

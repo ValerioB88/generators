@@ -1,19 +1,12 @@
-import os
 from multiprocessing.dummy import freeze_support
 from visualization import vis_utils as vis
-import glob
-import PIL.Image as Image
-from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_range_translation
-from compute_mean_std_dataset import compute_mean_and_std_from_dataset
+from generate_datasets.generators.utils_generator import get_range_translation
+from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
 from functools import partial
 from torch.utils.data import DataLoader
-from torchvision import utils
 import numpy as np
-from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
+from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from torch.utils.data import Sampler
-import torch
-import utils
-from generate_datasets.generators.translate_generator import TranslateGenerator
 from generate_datasets.generators.folder_translation_generator import FolderGen
 
 class FolderGenMetaLearning(FolderGen):

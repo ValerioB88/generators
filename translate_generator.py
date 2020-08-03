@@ -1,11 +1,10 @@
 from torchvision import transforms
-from compute_mean_std_dataset import compute_mean_and_std_from_dataset
+from generate_datasets.compute_mean_std_dataset import compute_mean_and_std_from_dataset
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
 from generate_datasets.generators.utils_generator import get_range_translation, TranslationType
 import pathlib
 import os
-import filecmp
 import numpy as np
 import cloudpickle
 
