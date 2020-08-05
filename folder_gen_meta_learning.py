@@ -10,16 +10,17 @@ import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from torch.utils.data import Sampler
 from generate_datasets.generators.folder_translation_generator import FolderGen
-
+import warnings
 
 class FolderGenMetaLearning(FolderGen):
-    def __init__(self, folder, translation_type_training, translation_type_test, sampler, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+    def __init__(self, folder, translation_type_training, translation_type_test, sampler, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
         self.translation_type_test = translation_type_test
+        self.jitter = jitter
         self.sampler = sampler(dataset=self)
-        super().__init__(folder, translation_type_training, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
+        super().__init__(folder, translation_type_training, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
     def _finalize_init_(self):
-        self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty)
+        self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty, jitter=self.jitter)
         super()._finalize_init_()
 
     def call_compute_stat(self, filename):
@@ -50,7 +51,9 @@ class FolderGenMetaLearning(FolderGen):
         return canvas, label, {'center': random_center}
 
 class NShotTaskSampler(Sampler):
-    def __init__(self, dataset: FolderGen, n, k, q, num_tasks=1, episodes_per_epoch=999999):
+    warning_done = False
+
+    def __init__(self, dataset: FolderGen, n, k, q, num_tasks=1, episodes_per_epoch=999999, disjoint_train_and_test=True):
         super(NShotTaskSampler, self).__init__(dataset)
         self.episodes_per_epoch = episodes_per_epoch
         if num_tasks < 1:
@@ -81,6 +84,14 @@ class NShotTaskSampler(Sampler):
                 for k in episode_classes:
                     exclude = [i[1] for i in batch if i[0] == k]
                     good_to_take = [i for i in range(len(self.dataset.samples[k])) if i not in exclude]
+                    if not good_to_take:
+                        if not self.warning_done:
+                            warnings.warn(f'No elements left for testing in this class n. {k}.'
+                                          f'We will sample from the whole dataset.'
+                                          f'This is usually intentional if using different translations!'
+                                          f'This warning won''t be repeated. ')
+                            self.warning_done = True
+                        good_to_take = len(self.dataset.samples[k])
                     batch.extend([[k, i, 1] for i in np.random.choice(good_to_take, size=self.q)])
 
             yield np.stack(batch)

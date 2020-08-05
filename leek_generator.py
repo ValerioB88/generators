@@ -14,8 +14,8 @@ class LeekGenerator(FolderGen):
     """
     This generator takes a leek folder, and split them in two according to their name (ending in SD or SS)
     """
-    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
-        super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
+        super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object, jitter=jitter)
 
     def _define_num_classes_(self):
         self.name_classes = ['A', 'B']
@@ -39,11 +39,11 @@ class LeekGeneratorDoubleSide(LeekGenerator):
     """
     For the first half of leek objects, they will have a horizontal translation opposite to the indicated one.
     """
-    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), type_double=0):
+    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), type_double=0, jitter=20):
         self.num_images_in_folder = None
         # establish which half goes to the which side. Use 0 for training, 1 for testing. If type_double==0, the first half is swapped side. If type_double==1, the second half.
         self.type_double = type_double
-        super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object)
+        super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object, jitter=jitter)
 
     def _finalize_init_(self):
         self.num_images_in_folder = len(glob.glob(self.folder + '/**.png'))

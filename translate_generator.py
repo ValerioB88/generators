@@ -9,13 +9,14 @@ import numpy as np
 import cloudpickle
 
 class TranslateGenerator(ABC, Dataset):
-    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
         self.transform = None
         self.translation_type = translation_type
         self.middle_empty = middle_empty
+        self.jitter = jitter
         self.name_generator = name_generator
         self.background_color_type = background_color_type
         self.stats = {}
@@ -35,14 +36,14 @@ class TranslateGenerator(ABC, Dataset):
                 self.translation_type_str = 'multi_long'
             assert len(self.translation_type) == self.num_classes
             for idx, transl in self.translation_type.items():
-                self.translations_range[idx] = get_range_translation(transl, size_object[1], self.size_canvas, size_object[0], self.middle_empty)
+                self.translations_range[idx] = get_range_translation(transl, size_object[1], self.size_canvas, size_object[0], self.middle_empty, jitter=jitter)
 
         # Same translation type for all classes
         # can be TranslationType, tuple (X, Y) or tuple of (minX, maxX, minY, maxY)
         if not isinstance(self.translation_type, dict):
             self.translation_type_str = translation_type_to_str(self.translation_type)
             for idx in range(self.num_classes):
-                self.translations_range[idx] = get_range_translation(self.translation_type, size_object[1], self.size_canvas, size_object[0], self.middle_empty)
+                self.translations_range[idx] = get_range_translation(self.translation_type, size_object[1], self.size_canvas, size_object[0], self.middle_empty, jitter=self.jitter)
 
         self._finalize_init_()
 

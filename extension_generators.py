@@ -12,6 +12,7 @@ from PIL import ImageFilter
 from external.Image_Foveation_Python.retina_transform import foveat_img
 import cv2
 
+
 def foveate_extension(base_class, blurring_coeff=0.248):
     class ImageFoveationGeneratorMixin(base_class):
         def __init__(self, *args, **kwargs):
@@ -62,14 +63,21 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
             self.num_repetitions = num_repetitions
             self.mesh_trX, self.mesh_trY, self.mesh_class, self.mesh_rep = [], [], [], []
             self.current_index = 0
+            self.get_translation_values = self.symmetric_steps
             super().__init__(*args, **kwargs)
+
+        def min_to_max_steps(self, min, max):
+            return np.arange(min, max, self.grid_step_size)
+
+        def symmetric_steps(self, min, max):
+            return np.hstack((np.arange(self.size_canvas[0] // 2, min, -self.grid_step_size)[1::][::-1], np.arange(self.size_canvas[0] // 2, max, self.grid_step_size)))
 
         def _finalize_init_(self):
             for groupID in range(self.num_classes):
                 minX, maxX, minY, maxY = self.translations_range[groupID]
                 # Recall that maxX should NOT be included (it's [minX, maxX)
-                x, y, c, r = np.meshgrid(np.arange(minX, maxX, self.grid_step_size),
-                                         np.arange(minY, maxY, self.grid_step_size),
+                x, y, c, r = np.meshgrid(self.get_translation_values(minX, maxX),
+                                         self.get_translation_values(minY, maxY),
                                          groupID,
                                          np.arange(self.num_repetitions))
                 self.mesh_trX.extend(x.flatten())
@@ -77,6 +85,7 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
                 self.mesh_class.extend(c.flatten().astype(np.int64))
                 self.mesh_rep.extend(r.flatten())
             print('Created Finite Dataset [{}] with {} elements'.format(self.name_generator, self.__len__()))
+            print('Elements: X {}, Y {}'.format(self.get_translation_values(minX, maxX), self.get_translation_values(minY, maxY)))
 
             self.save_stats()
 

@@ -12,14 +12,14 @@ import copy
 
 
 class VertLineGenerator(TranslateGenerator):
-    def __init__(self, size_lines: list, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+    def __init__(self, size_lines: list, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
         # Label indicates the position of the longest one, that is: label = 0, the first one is the longest
         self.size_lines = size_lines
         self.trial_lines = copy.deepcopy(self.size_lines)
         # assert np.all([i < size_object[1] for i in size_lines]), "Size Lines must be smaller than size_object_y"
         # assert len(self.size_lines) == 2, "Use only two lines!"
         assert self.size_lines[0] < self.size_lines[1], "Size line should be [short] [long]"
-        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
+        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
     def _define_num_classes_(self):
         return len(self.size_lines)

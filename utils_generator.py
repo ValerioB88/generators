@@ -16,9 +16,8 @@ def get_background_color(background_type):
     return background_color
 
 
-def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, middle_empty):
+def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, middle_empty, jitter=20):
     # translation here is always [minX, maxX), [minY, maxY)
-    jitter = 20
     if isinstance(translation_type, TranslationType):
         # sy = size_object_y / 10
         # sx = size_object_x / 10
@@ -76,6 +75,9 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
             maxY = size_canvas[0] // 2 + jitter // 2 + 1
 
         elif translation_type == TranslationType.HLINE:
+            # idx =[i for i in range(20) if size_canvas[0] // 2 + (size_object_x // 2 * i) < size_canvas[0] - (size_object_x // 2 + jitter) + 1][-1]
+            # minX = size_canvas[0] // 2 - (size_object_x // 2 * idx)
+            # maxX = size_canvas[0] // 2 + (size_object_x // 2 * idx) + 1
             minX = size_object_x // 2
             maxX = size_canvas[0] - size_object_x // 2 + 1
             minY = size_canvas[1] // 2

@@ -21,8 +21,10 @@ class FolderGen(TranslateGenerator):
     If the folder contains images, then multi_folder is set to False, each image is a class. Otherwise we traverse the folder
     structure and arrive to the last folder before each set of images, and that folder path is a class.
     """
-    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
+    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
         self.folder = folder
+        self.jitter = jitter
+        self.name_classes = []
         if not os.path.exists(self.folder):
             assert False, 'Folder {} does not exist'.format(self.folder)
         if np.all([os.path.splitext(i)[1] == '.png' for i in glob.glob(self.folder + '/**')]):
@@ -34,7 +36,6 @@ class FolderGen(TranslateGenerator):
         else:
             assert False, "Either provide a folder with only images or a folder with only folder (classes)"
 
-        self.name_classes = []
         index_class = 0
         if self.multi_folder:
             self.samples = {}
@@ -46,8 +47,7 @@ class FolderGen(TranslateGenerator):
                     [self.samples[index_class].append(name_class + '/' + i) for i in filenames]
                     index_class += 1
 
-
-        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object)
+        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
     def _finalize_init_(self):
         super()._finalize_init_()
