@@ -74,7 +74,7 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
                                          np.arange(self.num_repetitions))
                 self.mesh_trX.extend(x.flatten())
                 self.mesh_trY.extend(y.flatten())
-                self.mesh_class.extend(c.flatten())
+                self.mesh_class.extend(c.flatten().astype(np.int64))
                 self.mesh_rep.extend(r.flatten())
             print('Created Finite Dataset [{}] with {} elements'.format(self.name_generator, self.__len__()))
 

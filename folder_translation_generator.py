@@ -14,6 +14,7 @@ from generate_datasets.generators.utils_generator import TranslationType, BackGr
 import utils
 from generate_datasets.generators.translate_generator import TranslateGenerator
 
+
 class FolderGen(TranslateGenerator):
     """
     This generator is given a folder with images inside, and each image is treated as a different class.

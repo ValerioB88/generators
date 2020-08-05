@@ -11,6 +11,7 @@ from generate_datasets.generators.utils_generator import TranslationType, BackGr
 from torch.utils.data import Sampler
 from generate_datasets.generators.folder_translation_generator import FolderGen
 
+
 class FolderGenMetaLearning(FolderGen):
     def __init__(self, folder, translation_type_training, translation_type_test, sampler, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50)):
         self.translation_type_test = translation_type_test
@@ -22,7 +23,9 @@ class FolderGenMetaLearning(FolderGen):
         super()._finalize_init_()
 
     def call_compute_stat(self, filename):
-        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=1))
+        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
+                                                 data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=1),
+                                                 max_iteration=20)
 
     def _get_label_(self, idx):
         return idx[0]
