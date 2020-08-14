@@ -35,7 +35,7 @@ class FolderGen(TranslateGenerator):
         index_class = 0
         if self.multi_folder:
             self.samples = {}
-            for dirpath, dirname, filenames in os.walk(self.folder):
+            for dirpath, dirname, filenames in sorted(os.walk(self.folder)):
                 if filenames != [] and '.png' in filenames[0]:
                     name_class = str.split(dirpath, self.folder)[-1].strip('\\')
                     self.name_classes.append(name_class)
@@ -47,7 +47,7 @@ class FolderGen(TranslateGenerator):
 
     def _finalize_init_(self):
         super()._finalize_init_()
-        print('Created Dataset from folder: {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder'))
+        print('Created Dataset from folder: {}, {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
 
     def _define_num_classes_(self):
         return len(self.samples)

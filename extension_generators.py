@@ -24,7 +24,7 @@ def add_salt_pepper_fixation(base_class, type_noise='pepper', strength=0.5):
     return AddSaltPepperNoiseFixation
 
 
-def foveate_extension(base_class, blurring_coeff=0.248):
+def ffoveate_extension(base_class, blurring_coeff=0.248):
     class ImageFoveationGeneratorMixin(base_class):
         def __init__(self, *args, **kwargs):
             self.blurring_coeff = blurring_coeff
@@ -127,7 +127,7 @@ def random_resize_extension(base_class, low_val=1.0, high_val=1.0):
             assert self.low_val <= self.high_val
             super().__init__(*args, **kwargs)
 
-        def _resize(self, image: Image):
+        def _resize_(self, image: Image):
             if self.size_object is not None:
                 resize_factor = np.random.uniform(self.low_val, self.high_val)
                 image = image.resize((int(self.size_object[0] * resize_factor),
