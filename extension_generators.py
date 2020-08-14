@@ -1,16 +1,27 @@
 from multiprocessing.dummy import freeze_support
 from torch.utils.data import DataLoader
 import numpy as np
-
+import torch
 import framework_utils
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
-from generate_datasets.generators.leek_generator import LeekGenerator
-import visualization.vis_utils as vis
-from generate_datasets.generators.folder_translation_generator import FolderGen
+# from generate_datasets.generators.folder_translation_generator import FolderGen
 import PIL.Image as Image
 from PIL import ImageFilter
 from external.Image_Foveation_Python.retina_transform import foveat_img
 import cv2
+from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixation
+from torchvision.transforms import Normalize
+
+
+def add_salt_pepper_fixation(base_class, type_noise='pepper', strength=0.5):
+    class AddSaltPepperNoiseFixation(base_class):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            idx_norm = [idx for idx, i in enumerate(self.transform.transforms) if isinstance(i, Normalize)][0]
+            self.transform.transforms.insert(idx_norm, SaltPepperNoiseFixation(type_noise=type_noise,
+                                                                               strength=strength,
+                                                                               size_canvas=self.size_canvas))
+    return AddSaltPepperNoiseFixation
 
 
 def foveate_extension(base_class, blurring_coeff=0.248):
@@ -152,9 +163,9 @@ def do_stuff():
     #                                          base_class=foveate_extension(blurring_coeff=1.5,
     #                                          base_class=finite_extension(FolderGen, grid_size=50, num_repetitions=2)))
 
-    extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
-    mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
-    dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
+    # extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
+    # mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
+    # dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
     # for i, data in enumerate(dataloader):
     #     img, lab, _ = data

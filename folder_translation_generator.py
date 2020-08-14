@@ -2,16 +2,12 @@ import os
 from multiprocessing.dummy import freeze_support
 
 import framework_utils
-from visualization import vis_utils as vis
 import glob
 import PIL.Image as Image
 
 from torch.utils.data import DataLoader
-from torchvision import utils
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
-
-import utils
 from generate_datasets.generators.translate_generator import TranslateGenerator
 
 
