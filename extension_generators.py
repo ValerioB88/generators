@@ -13,7 +13,7 @@ from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixati
 from torchvision.transforms import Normalize
 
 
-def add_salt_pepper_fixation(base_class, type_noise='pepper', strength=0.5):
+def add_salt_pepper_fixation(base_class, type_noise='pepper1', strength=0.5):
     class AddSaltPepperNoiseFixation(base_class):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -24,7 +24,7 @@ def add_salt_pepper_fixation(base_class, type_noise='pepper', strength=0.5):
     return AddSaltPepperNoiseFixation
 
 
-def ffoveate_extension(base_class, blurring_coeff=0.248):
+def foveate_extension(base_class, blurring_coeff=0.248):
     class ImageFoveationGeneratorMixin(base_class):
         def __init__(self, *args, **kwargs):
             self.blurring_coeff = blurring_coeff

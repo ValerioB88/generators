@@ -30,7 +30,7 @@ class FolderGen(TranslateGenerator):
         elif np.all([os.path.splitext(i)[1] == '' for i in glob.glob(self.folder + '/**')]):
             self.multi_folder = True
         else:
-            assert False, "Either provide a folder with only images or a folder with only folder (classes)"
+            assert False, f"Either provide a folder with only images or a folder with only folder (classes)\nFolder {folder}"
 
         index_class = 0
         if self.multi_folder:
