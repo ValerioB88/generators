@@ -1,5 +1,5 @@
 from multiprocessing.dummy import freeze_support
-
+import warnings
 import framework_utils
 from visualization import vis_utils as vis
 from generate_datasets.generators.utils_generator import get_range_translation
@@ -20,6 +20,10 @@ class FolderGenMetaLearning(FolderGen):
         super().__init__(folder, translation_type_training, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
     def _finalize_init_(self):
+        if self.num_classes < self.sampler.k:
+            warnings.warn(f'FolderGen: Number of classes in the folder < k. K will be changed to {self.num_classes}')
+            self.sampler.k = self.num_classes
+
         self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty, jitter=self.jitter)
         super()._finalize_init_()
 
