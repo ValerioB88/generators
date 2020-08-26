@@ -25,10 +25,10 @@ class LeekGenerator(FolderGen):
         self.group['B'] = [os.path.basename(i) for i in glob.glob(self.folder + '/**_SS.png')]
         return num_classes
 
-    def _get_label_(self, item):
+    def _get_label(self, item):
         return np.random.randint(len(self.name_classes))
 
-    def _get_my_item_(self, idx, label):
+    def _get_my_item(self, idx, label):
         name_class_selected = self.name_classes[label]
         choice_image = np.random.choice(self.group[name_class_selected])
         canvas, random_center = self._transpose_selected_image(choice_image, label, idx)
@@ -45,12 +45,12 @@ class LeekGeneratorDoubleSide(LeekGenerator):
         self.type_double = type_double
         super().__init__(folder, translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas=size_canvas, size_object=size_object, jitter=jitter)
 
-    def _finalize_init_(self):
+    def _finalize_init(self):
         self.num_images_in_folder = len(glob.glob(self.folder + '/**.png'))
-        super()._finalize_init_()
+        super()._finalize_init()
 
-    def _random_translation_(self, groupID, image_name=None):
-        minX, maxX, minY, maxY = self.translations_range[groupID]
+    def _random_translation(self, class_num, image_name=None):
+        minX, maxX, minY, maxY = self.translations_range[class_num]
         x = np.random.randint(minX, maxX)
         y = np.random.randint(minY, maxY)
         num = int(re.sub(r"\D", "", image_name))

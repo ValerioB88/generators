@@ -36,13 +36,13 @@ class VertLineGenerator(TranslateGenerator):
         return canvas
 
     def _transpose_selected_image(self, canvas, label, idx):
-        image = self._resize_(canvas)
-        random_center = self._get_translation_(label, None, None)
+        image = self._resize(canvas)
+        random_center = self._get_translation(label, None, None)
         image_in_canvas = framework_utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
         return image_in_canvas, random_center
 
 
-    def _get_my_item_(self, idx, label):
+    def _get_my_item(self, idx, label):
         canvas = self._get_canvas_vert_lines_(label)
         canvas, random_center = self._transpose_selected_image(canvas, label, idx)
         return canvas, label, {'center': random_center}

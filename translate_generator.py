@@ -26,28 +26,57 @@ class TranslateGenerator(ABC, Dataset):
         self.num_classes = self._define_num_classes_()
 
         self.translations_range = {}
+        self.p_boxes = {i: [1.0] for i in range(self.num_classes)}
         def translation_type_to_str(translation_type):
             return str.lower(str.split(str(translation_type), '.')[1]) if isinstance(translation_type, TranslationType) else "_".join(str(translation_type).split(", "))
 
         size_object = self.size_object if self.size_object is not None else (0, 0)
+        def fill_translation_range(transl):
+            if isinstance(translation_type, TranslationType):
+                return get_range_translation(transl,
+                                             size_object[1],
+                                             self.size_canvas,
+                                             size_object[0],
+                                             self.middle_empty,
+                                             jitter=self.jitter)
+
+            elif isinstance(transl, tuple) and len(np.array(transl).flatten()) == 2:
+                return (transl[0],
+                        transl[0] + 1,
+                        transl[1],
+                        transl[1] + 1)
+
+            elif isinstance(transl, tuple) and len(transl) == 4:
+                return transl
+
+            elif isinstance(transl, tuple) and np.all([isinstance(transl[i], tuple) for i in range(len(transl))]):
+                assert np.all([np.all([isinstance(t[i], tuple) for i in range(len(t))]) for t in self.translation_type.values()]), 'If one of the translation value is a box, they all need to be boxes (tuple of tuples)'
+                self._get_translation = self._multi_area_translation
+                area_boxes = np.array([(b[1] - b[0]) * (b[3] - b[2]) for b in transl])
+                self.p_boxes[idx] = tuple(area_boxes / np.sum(area_boxes))
+                return transl
+            else:
+                assert False, f'TranslationType type not understood: [{transl}]'
+
+        # One key for each class
         if isinstance(self.translation_type, dict):
             self.translation_type_str = "".join(["".join([str(k), translation_type_to_str(v)]) for k, v in self.translation_type.items()])
             if len(self.translation_type_str) > 250:
                 self.translation_type_str = 'multi_long'
             assert len(self.translation_type) == self.num_classes
             for idx, transl in self.translation_type.items():
-                self.translations_range[idx] = get_range_translation(transl, size_object[1], self.size_canvas, size_object[0], self.middle_empty, jitter=jitter)
+                self.translations_range[idx] = fill_translation_range(transl)
 
         # Same translation type for all classes
-        # can be TranslationType, tuple (X, Y) or tuple of (minX, maxX, minY, maxY)
+        # can be TranslationType, tuple (X, Y), tuple (minX, maxX, minY, maxY), or tuple of tuples
         if not isinstance(self.translation_type, dict):
             self.translation_type_str = translation_type_to_str(self.translation_type)
             for idx in range(self.num_classes):
-                self.translations_range[idx] = get_range_translation(self.translation_type, size_object[1], self.size_canvas, size_object[0], self.middle_empty, jitter=self.jitter)
+                self.translations_range[idx] = fill_translation_range(self.translation_type)
 
-        self._finalize_init_()
+        self._finalize_init()
 
-    def _finalize_init_(self):
+    def _finalize_init(self):
         self.save_stats()
 
     def call_compute_stat(self, filename):
@@ -84,11 +113,18 @@ class TranslateGenerator(ABC, Dataset):
         else:
             self.transform = transforms.Compose([transforms.ToTensor(), normalize])
 
-    def _get_translation_(self, label, image_name=None, idx=None):
-        return self._random_translation_(label, image_name)
+    def _get_translation(self, label, image_name=None, idx=None):
+        return self._random_translation(label, image_name)
 
-    def _random_translation_(self, groupID, image_name=None):
-        minX, maxX, minY, maxY = self.translations_range[groupID]
+    def _multi_area_translation(self, class_num, image_name=None, idx=None):
+        b = np.random.choice(range(len(self.translations_range[class_num])), p=self.p_boxes[class_num])
+        minX, maxX, minY, maxY = self.translations_range[class_num][b]
+        x = np.random.randint(minX, maxX)
+        y = np.random.randint(minY, maxY)
+        return x, y
+
+    def _random_translation(self, class_num, image_name=None):
+        minX, maxX, minY, maxY = self.translations_range[class_num]
         x = np.random.randint(minX, maxX)
         y = np.random.randint(minY, maxY)
         return x, y
@@ -101,19 +137,19 @@ class TranslateGenerator(ABC, Dataset):
         return 300000  # np.iinfo(np.int64).max
 
     @abstractmethod
-    def _get_my_item_(self, item, label):
+    def _get_my_item(self, item, label):
         raise NotImplementedError
 
-    def _finalize_get_item_(self, canvas, label, more):
+    def _finalize_get_item(self, canvas, label, more):
         return canvas, label, more
 
-    def _get_label_(self, idx):
+    def _get_label(self, idx):
         return np.random.randint(self.num_classes)
 
-    def _prepare_get_item_(self):
+    def _prepare_get_item(self):
         pass
 
-    def _resize_(self, image):
+    def _resize(self, image):
         if self.size_object is not None:
             image = image.resize(self.size_object)
         return image
@@ -123,12 +159,12 @@ class TranslateGenerator(ABC, Dataset):
         @param idx: this is only used with 'Fixed' generators. Otherwise it doesn't mean anything to use an index for an infinite generator.
         @return:
         """
-        self._prepare_get_item_()
-        label = self._get_label_(idx)
+        self._prepare_get_item()
+        label = self._get_label(idx)
         # _get_my_item should return a PIL image unless finalize_get_item is implemented and it does return a PIL image
-        canvas, label, more = self._get_my_item_(idx, label)
+        canvas, label, more = self._get_my_item(idx, label)
         # get my item must return a PIL image
-        canvas, label, more = self._finalize_get_item_(canvas, label, more)
+        canvas, label, more = self._finalize_get_item(canvas, label, more)
 
         if self.transform is not None:
             canvas = self.transform(canvas)

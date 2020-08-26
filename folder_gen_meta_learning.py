@@ -19,25 +19,25 @@ class FolderGenMetaLearning(FolderGen):
         self.sampler = sampler(dataset=self)
         super().__init__(folder, translation_type_training, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
-    def _finalize_init_(self):
+    def _finalize_init(self):
         if self.num_classes < self.sampler.k:
             warnings.warn(f'FolderGen: Number of classes in the folder < k. K will be changed to {self.num_classes}')
             self.sampler.k = self.num_classes
 
         self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty, jitter=self.jitter)
-        super()._finalize_init_()
+        super()._finalize_init()
 
     def call_compute_stat(self, filename):
         return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
                                                  data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=1),
                                                  max_iteration=20)
 
-    def _get_label_(self, idx):
+    def _get_label(self, idx):
         return idx[0]
 
-    def _get_translation_(self, label, image_name=None, idx=None):
+    def _get_translation(self, label, image_name=None, idx=None):
         if idx[2] == 0:
-            return self._random_translation_(label, image_name)
+            return self._random_translation(label, image_name)
         else:
             return self._random_translation_test(label, image_name)
 
@@ -47,7 +47,7 @@ class FolderGenMetaLearning(FolderGen):
         y = np.random.randint(minY, maxY)
         return x, y
 
-    def _get_my_item_(self, idx, label):
+    def _get_my_item(self, idx, label):
         image_name = self.samples[label][idx[1]]
 
         canvas, random_center = self._transpose_selected_image(image_name, label, idx)

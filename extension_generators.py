@@ -30,8 +30,8 @@ def foveate_extension(base_class, blurring_coeff=0.248):
             self.blurring_coeff = blurring_coeff
             super().__init__(*args, **kwargs)
 
-        def _finalize_get_item_(self, canvas: Image, label, more):
-            canvas, label, more = super()._finalize_get_item_(canvas, label, more)
+        def _finalize_get_item(self, canvas: Image, label, more):
+            canvas, label, more = super()._finalize_get_item(canvas, label, more)
             # convert PIL to opencv
             open_cv_image = np.array(canvas)
             # Convert RGB to BGR
@@ -50,8 +50,8 @@ def visual_drop_extension(generator_class, blurring_coeff):
             self.blurring_coeff = blurring_coeff
             super().__init__(*args, **kwargs)
 
-        def _finalize_get_item_(self, canvas: Image, label, more):
-            canvas, label, more =  super()._finalize_get_item_(canvas, label, more)
+        def _finalize_get_item(self, canvas: Image, label, more):
+            canvas, label, more =  super()._finalize_get_item(canvas, label, more)
             distance_from_center = np.linalg.norm(np.array(more['center']) - np.array(self.size_canvas) / 2)
             canvas = canvas.filter(ImageFilter.GaussianBlur(distance_from_center * self.blurring_coeff))
             return canvas, label, more
@@ -81,9 +81,23 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
             return np.arange(min, max, self.grid_step_size)
 
         def symmetric_steps(self, min, max):
-            return np.hstack((np.arange(self.size_canvas[0] // 2, min, -self.grid_step_size)[1::][::-1], np.arange(self.size_canvas[0] // 2, max, self.grid_step_size)))
+            '''
+            Symmetryc step from the center - plus the min and max.
+            @param min:
+            @param max:
+            @return:
+            '''
+            if max > self.size_canvas[0] // 2 and min < self.size_canvas[0]:
+                t = np.hstack((np.arange(self.size_canvas[0] // 2, min, -self.grid_step_size)[1::][::-1],
+                           np.arange(self.size_canvas[0] // 2, max, self.grid_step_size)))
+                t = np.insert(t, 0, min)
+                t = np.insert(t, len(t), max - 1)
+                return t
+            else:
+                return self.min_to_max_steps(min, max)
 
-        def _finalize_init_(self):
+
+        def _finalize_init(self):
             for groupID in range(self.num_classes):
                 minX, maxX, minY, maxY = self.translations_range[groupID]
                 # Recall that maxX should NOT be included (it's [minX, maxX)
@@ -95,7 +109,7 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
                 self.mesh_trY.extend(y.flatten())
                 self.mesh_class.extend(c.flatten().astype(np.int64))
                 self.mesh_rep.extend(r.flatten())
-            print('Created Finite Dataset [{}] with {} elements'.format(self.name_generator, self.__len__()))
+            print('Created Finite Dataset [{}] with {} elements from folder: {}, {}, {}'.format(self.name_generator, self.__len__(), self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
             print('Elements: X {}, Y {}'.format(self.get_translation_values(minX, maxX), self.get_translation_values(minY, maxY)))
 
             self.save_stats()
@@ -103,10 +117,10 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
         def __len__(self):
             return len(self.mesh_trX)
 
-        def _get_translation_(self, label=None, image_name=None, idx=None):
+        def _get_translation(self, label=None, image_name=None, idx=None):
             return self.mesh_trX[idx], self.mesh_trY[idx]
 
-        def _get_label_(self, item):
+        def _get_label(self, item):
             return self.mesh_class[item]
 
     return FiniteTranslationGeneratorMixin
@@ -127,7 +141,7 @@ def random_resize_extension(base_class, low_val=1.0, high_val=1.0):
             assert self.low_val <= self.high_val
             super().__init__(*args, **kwargs)
 
-        def _resize_(self, image: Image):
+        def _resize(self, image: Image):
             if self.size_object is not None:
                 resize_factor = np.random.uniform(self.low_val, self.high_val)
                 image = image.resize((int(self.size_object[0] * resize_factor),

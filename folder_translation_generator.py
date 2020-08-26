@@ -5,6 +5,7 @@ import framework_utils
 import glob
 import PIL.Image as Image
 
+from natsort import natsorted
 from torch.utils.data import DataLoader
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
@@ -26,7 +27,7 @@ class FolderGen(TranslateGenerator):
         if np.all([os.path.splitext(i)[1] == '.png' for i in glob.glob(self.folder + '/**')]):
             self.multi_folder = False
             self.name_classes = [os.path.basename(i) for i in np.sort(glob.glob(self.folder + '/**'))]
-            self.samples = {k: [str.split(i, self.folder)[-1].strip('\\')] for k, i in enumerate(np.sort(glob.glob(self.folder + '/**')))}
+            self.samples = {k: [os.path.basename(i)] for k, i in enumerate(np.sort(glob.glob(self.folder + '/**')))}
         elif np.all([os.path.splitext(i)[1] == '' for i in glob.glob(self.folder + '/**')]):
             self.multi_folder = True
         else:
@@ -35,9 +36,9 @@ class FolderGen(TranslateGenerator):
         index_class = 0
         if self.multi_folder:
             self.samples = {}
-            for dirpath, dirname, filenames in sorted(os.walk(self.folder)):
+            for dirpath, dirname, filenames in natsorted(os.walk(self.folder)):
                 if filenames != [] and '.png' in filenames[0]:
-                    name_class = str.split(dirpath, self.folder)[-1].strip('\\')
+                    name_class = os.path.basename(dirpath)
                     self.name_classes.append(name_class)
                     self.samples[index_class] = []
                     [self.samples[index_class].append(name_class + '/' + i) for i in filenames]
@@ -45,8 +46,8 @@ class FolderGen(TranslateGenerator):
 
         super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
 
-    def _finalize_init_(self):
-        super()._finalize_init_()
+    def _finalize_init(self):
+        super()._finalize_init()
         print('Created Dataset from folder: {}, {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
 
     def _define_num_classes_(self):
@@ -54,15 +55,17 @@ class FolderGen(TranslateGenerator):
 
     def _transpose_selected_image(self, image_name, label, idx):
         image = Image.open(self.folder + '/' + image_name)
-        image = self._resize_(image)
-        random_center = self._get_translation_(label, image_name, idx)
-        image_in_canvas = framework_utils.copy_img_in_canvas(image, np.array(self.size_canvas), random_center, color_canvas=get_background_color(self.background_color_type))
+        image = self._resize(image)
+        random_center = self._get_translation(label, image_name, idx)
+        image_in_canvas = framework_utils.copy_img_in_canvas(image, self.size_canvas, random_center, color_canvas=get_background_color(self.background_color_type))
 
         return image_in_canvas, random_center
 
-    def _get_my_item_(self, idx, label):
+    def _get_my_item(self, idx, label):
         # Notice that we ignore idx and just take a random image
-        image_name = np.random.choice(self.samples[label])
+        num = np.random.choice(len(self.samples[label]))
+        image_name = self.samples[label][num]
+        # image_name = np.random.choice(self.samples[label])
 
         canvas, random_center = self._transpose_selected_image(image_name, label, idx)
         return canvas, label, {'center': random_center}
