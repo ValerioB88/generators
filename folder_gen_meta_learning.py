@@ -80,7 +80,7 @@ class NShotTaskSampler(Sampler):
 
             for task in range(self.num_tasks):
                 # Get random classes
-                episode_classes = np.random.choice(self.dataset.num_classes, size=self.k, replace=False)
+                episode_classes = np.random.choice(self.dataset.name_classes, size=self.k, replace=False)
 
                 for k in episode_classes:
                     batch.extend([[k, i, 0] for i in np.random.choice(len(self.dataset.samples[k]), size=self.n)])

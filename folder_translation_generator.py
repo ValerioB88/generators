@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
 from generate_datasets.generators.translate_generator import TranslateGenerator
-
+import pathlib
 
 class FolderGen(TranslateGenerator):
     """
@@ -18,33 +18,39 @@ class FolderGen(TranslateGenerator):
     If the folder contains images, then multi_folder is set to False, each image is a class. Otherwise we traverse the folder
     structure and arrive to the last folder before each set of images, and that folder path is a class.
     """
-    def __init__(self, folder, translation_type, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
+    def __init__(self, folder, **kwargs):
         self.folder = folder
-        self.jitter = jitter
         self.name_classes = []
+        self.samples = {}
+        translation_type = kwargs['translation_type']
         if not os.path.exists(self.folder):
             assert False, 'Folder {} does not exist'.format(self.folder)
         if np.all([os.path.splitext(i)[1] == '.png' for i in glob.glob(self.folder + '/**')]):
             self.multi_folder = False
-            self.name_classes = [os.path.basename(i) for i in np.sort(glob.glob(self.folder + '/**'))]
-            self.samples = {k: [os.path.basename(i)] for k, i in enumerate(np.sort(glob.glob(self.folder + '/**')))}
+            for i in np.sort(glob.glob(self.folder + '/**')):
+                if isinstance(translation_type, dict) and os.path.splitext(os.path.basename(i))[0] not in translation_type:
+                    continue
+                name_class = os.path.splitext(os.path.basename(i))[0]
+                self.name_classes.append(name_class)
+                self.samples[name_class] = [os.path.basename(i)]
         elif np.all([os.path.splitext(i)[1] == '' for i in glob.glob(self.folder + '/**')]):
             self.multi_folder = True
         else:
-            assert False, f"Either provide a folder with only images or a folder with only folder (classes)\nFolder {folder}"
+            assert False, f"Either provide a folder with only images or a folder with only folders (classes)\nFolder {folder}"
 
-        index_class = 0
+        folder_path = pathlib.Path(self.folder)
         if self.multi_folder:
             self.samples = {}
             for dirpath, dirname, filenames in natsorted(os.walk(self.folder)):
+                dir_path = pathlib.Path(dirpath)
                 if filenames != [] and '.png' in filenames[0]:
-                    name_class = os.path.basename(dirpath)
+                    name_class = (set(dir_path.parts) - (set(folder_path.parts) & set(dir_path.parts))).pop()
+                    if isinstance(translation_type, dict) and name_class not in translation_type:
+                        continue
                     self.name_classes.append(name_class)
-                    self.samples[index_class] = []
-                    [self.samples[index_class].append(name_class + '/' + i) for i in filenames]
-                    index_class += 1
-
-        super().__init__(translation_type, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
+                    self.samples[name_class] = []
+                    [self.samples[name_class].append(name_class + '/' + i) for i in filenames]
+        super().__init__(**kwargs)
 
     def _finalize_init(self):
         super()._finalize_init()
@@ -53,32 +59,34 @@ class FolderGen(TranslateGenerator):
     def _define_num_classes_(self):
         return len(self.samples)
 
-    def _transpose_selected_image(self, image_name, label, idx):
+    def _transpose_selected_image(self, image_name, class_name, idx):
         image = Image.open(self.folder + '/' + image_name)
         image = self._resize(image)
-        random_center = self._get_translation(label, image_name, idx)
+        random_center = self._get_translation(class_name, image_name, idx)
         image_in_canvas = framework_utils.copy_img_in_canvas(image, self.size_canvas, random_center, color_canvas=get_background_color(self.background_color_type))
 
         return image_in_canvas, random_center
 
-    def _get_my_item(self, idx, label):
+    def _get_my_item(self, idx, class_name):
         # Notice that we ignore idx and just take a random image
-        num = np.random.choice(len(self.samples[label]))
-        image_name = self.samples[label][num]
+        num = np.random.choice(len(self.samples[class_name]))
+        image_name = self.samples[class_name][num]
         # image_name = np.random.choice(self.samples[label])
 
-        canvas, random_center = self._transpose_selected_image(image_name, label, idx)
-        return canvas, label, {'center': random_center}
+        canvas, random_center = self._transpose_selected_image(image_name, class_name, idx)
+        return canvas, class_name, {'center': random_center}
 
 def do_stuff():
-    multi_folder_mnist = FolderGen('./data/Omniglot/transparent_white/images_background', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
-    dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
+    # translation = {'S1_SD': TranslationType.LEFT, 'S10_SD': TranslationType.WHOLE}
+    # omn = './data/Omniglot/transparent_white/images_background'
+    # multi_folder_mnist = FolderGen('./data/LeekImages/transparent10/groupA', translation_type=translation, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
+    # dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
+    #
+    # iterator = iter(dataloader)
+    # img, lab, _ = next(iterator)
+    # framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
 
-    iterator = iter(dataloader)
-    img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
-
-    leek_dataset = FolderGen('./data/LeekImages/transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    leek_dataset = FolderGen('./data/LeekImages/transparent', translation_type=TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

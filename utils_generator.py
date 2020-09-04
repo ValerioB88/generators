@@ -36,12 +36,11 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
         maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
     elif translation_type == TranslationType.WHOLE:
-        minX = int(size_object_x / 2 + sx)
-        maxX = int(size_canvas[0] - size_object_x / 2 - sx)
+        minX = int(size_object_x / 2 + sx) + jitter
+        maxX = int(size_canvas[0] - size_object_x / 2 - sx) - jitter
         # np.sum(x_grid < np.array(size_canvas)[0] / 2) == np.sum(x_grid > np.array(size_canvas)[0] / 2)
-        minY = int(size_object_y / 2 + sy)
-        maxY = int(size_canvas[1] - size_object_y / 2 - sy)
-
+        minY = int(size_object_y / 2 + sy) + jitter
+        maxY = int(size_canvas[1] - size_object_y / 2 - sy) - jitter
     #
     elif translation_type == TranslationType.SMALL_AREA_RIGHT:
         minX = int(size_canvas[1] / 2 + (size_canvas[1] / 2) * (1 / 3))

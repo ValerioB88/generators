@@ -92,27 +92,26 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
                            np.arange(self.size_canvas[0] // 2, max, self.grid_step_size)))
                 t = np.insert(t, 0, min)
                 t = np.insert(t, len(t), max - 1)
-                return t
+                return np.unique(t)
             else:
                 return self.min_to_max_steps(min, max)
 
 
         def _finalize_init(self):
-            for groupID in range(self.num_classes):
-                minX, maxX, minY, maxY = self.translations_range[groupID]
+            for class_name in self.name_classes:
+                minX, maxX, minY, maxY = self.translations_range[class_name]
                 # Recall that maxX should NOT be included (it's [minX, maxX)
                 x, y, c, r = np.meshgrid(self.get_translation_values(minX, maxX),
                                          self.get_translation_values(minY, maxY),
-                                         groupID,
+                                         class_name,
                                          np.arange(self.num_repetitions))
                 self.mesh_trX.extend(x.flatten())
                 self.mesh_trY.extend(y.flatten())
-                self.mesh_class.extend(c.flatten().astype(np.int64))
+                self.mesh_class.extend(c.flatten())
                 self.mesh_rep.extend(r.flatten())
             print('Created Finite Dataset [{}] with {} elements from folder: {}, {}, {}'.format(self.name_generator, self.__len__(), self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
             print('Elements: X {}, Y {}'.format(self.get_translation_values(minX, maxX), self.get_translation_values(minY, maxY)))
-
-            self.save_stats()
+            super()._finalize_init()
 
         def __len__(self):
             return len(self.mesh_trX)

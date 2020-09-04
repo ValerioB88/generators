@@ -9,10 +9,11 @@ import numpy as np
 import cloudpickle
 
 class TranslateGenerator(ABC, Dataset):
-    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
+    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=0, max_iteration_mean_std=20):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
+        self.max_iteration_mean_std = max_iteration_mean_std
         self.transform = None
         self.translation_type = translation_type
         self.middle_empty = middle_empty
@@ -24,15 +25,18 @@ class TranslateGenerator(ABC, Dataset):
         self.size_canvas = size_canvas
         self.size_object = size_object  # x and y
         self.num_classes = self._define_num_classes_()
-
+        if not self.num_classes:
+            assert False, 'Dataset has no classes!'
+        if not hasattr(self, 'num_classes'):
+            self.name_classes = [str(i) for i in range(self.num_classes)]
         self.translations_range = {}
-        self.p_boxes = {i: [1.0] for i in range(self.num_classes)}
+        self.p_boxes = {i: [1.0] for i in self.name_classes}
         def translation_type_to_str(translation_type):
             return str.lower(str.split(str(translation_type), '.')[1]) if isinstance(translation_type, TranslationType) else "_".join(str(translation_type).split(", "))
 
         size_object = self.size_object if self.size_object is not None else (0, 0)
         def fill_translation_range(transl):
-            if isinstance(translation_type, TranslationType):
+            if isinstance(transl, TranslationType):
                 return get_range_translation(transl,
                                              size_object[1],
                                              self.size_canvas,
@@ -71,25 +75,29 @@ class TranslateGenerator(ABC, Dataset):
         # can be TranslationType, tuple (X, Y), tuple (minX, maxX, minY, maxY), or tuple of tuples
         if not isinstance(self.translation_type, dict):
             self.translation_type_str = translation_type_to_str(self.translation_type)
-            for idx in range(self.num_classes):
+            for idx in self.name_classes:
                 self.translations_range[idx] = fill_translation_range(self.translation_type)
 
         self._finalize_init()
 
     def _finalize_init(self):
+        self.map_name_to_num = {i: idx for idx, i in enumerate(self.name_classes)}
+        self.map_num_to_name = {idx: i for idx, i in enumerate(self.name_classes)}
+
+        print(f'Map class_name -> labels: \n {self.map_name_to_num}')
         self.save_stats()
 
     def call_compute_stat(self, filename):
-        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename))
+        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), max_iteration=self.max_iteration_mean_std)
 
     def save_stats(self):
         pathlib.Path('./data/generators/').mkdir(parents=True, exist_ok=True)
         filename = '{}_tr_[{}]_bg_{}_md_{}_gs{}_sk.pickle'.format(type(self).__name__, self.translation_type_str, self.background_color_type.value, int(self.middle_empty), int(self.grayscale))
 
         if os.path.exists('./data/generators/{}'.format(filename)) and os.path.exists('./data/generators/stats_{}'.format(filename)):
-            if cloudpickle.load(open('./data/generators/{}'.format(filename), 'rb')).__dict__ == self.__dict__:
-                compute_mean_std = False
-            else:
+            #if cloudpickle.load(open('./data/generators/{}'.format(filename), 'rb')).__dict__ == self.__dict__:
+            #    compute_mean_std = False
+            #else:
                 compute_mean_std = True
         else:
             compute_mean_std = True
@@ -116,15 +124,15 @@ class TranslateGenerator(ABC, Dataset):
     def _get_translation(self, label, image_name=None, idx=None):
         return self._random_translation(label, image_name)
 
-    def _multi_area_translation(self, class_num, image_name=None, idx=None):
-        b = np.random.choice(range(len(self.translations_range[class_num])), p=self.p_boxes[class_num])
-        minX, maxX, minY, maxY = self.translations_range[class_num][b]
+    def _multi_area_translation(selfclass_name, class_name, image_name=None, idx=None):
+        b = np.random.choice(range(len(selfclass_name.translations_range[class_name])), p=selfclass_name.p_boxes[class_name])
+        minX, maxX, minY, maxY = selfclass_name.translations_range[class_name][b]
         x = np.random.randint(minX, maxX)
         y = np.random.randint(minY, maxY)
         return x, y
 
-    def _random_translation(self, class_num, image_name=None):
-        minX, maxX, minY, maxY = self.translations_range[class_num]
+    def _random_translation(self, class_name, image_name=None):
+        minX, maxX, minY, maxY = self.translations_range[class_name]
         x = np.random.randint(minX, maxX)
         y = np.random.randint(minY, maxY)
         return x, y
@@ -140,11 +148,11 @@ class TranslateGenerator(ABC, Dataset):
     def _get_my_item(self, item, label):
         raise NotImplementedError
 
-    def _finalize_get_item(self, canvas, label, more):
-        return canvas, label, more
+    def _finalize_get_item(self, canvas, class_name, more):
+        return canvas, class_name, more
 
     def _get_label(self, idx):
-        return np.random.randint(self.num_classes)
+        return np.random.choice(self.name_classes)
 
     def _prepare_get_item(self):
         pass
@@ -160,15 +168,15 @@ class TranslateGenerator(ABC, Dataset):
         @return:
         """
         self._prepare_get_item()
-        label = self._get_label(idx)
+        class_name = self._get_label(idx)
         # _get_my_item should return a PIL image unless finalize_get_item is implemented and it does return a PIL image
-        canvas, label, more = self._get_my_item(idx, label)
+        canvas, class_name, more = self._get_my_item(idx, class_name)
         # get my item must return a PIL image
-        canvas, label, more = self._finalize_get_item(canvas, label, more)
+        canvas, class_name, more = self._finalize_get_item(canvas, class_name, more)
 
         if self.transform is not None:
             canvas = self.transform(canvas)
         else:
             canvas = np.array(canvas)
 
-        return canvas, label, more
+        return canvas, self.map_name_to_num[class_name], more
