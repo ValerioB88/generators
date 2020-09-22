@@ -9,7 +9,7 @@ import numpy as np
 import cloudpickle
 
 class TranslateGenerator(ABC, Dataset):
-    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=0, max_iteration_mean_std=20):
+    def __init__(self, translation_type, middle_empty, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=0, max_iteration_mean_std=50):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
@@ -103,7 +103,7 @@ class TranslateGenerator(ABC, Dataset):
             compute_mean_std = True
 
         if compute_mean_std:
-            cloudpickle.dump(self, open('./data/generators/{}'.format(filename), 'wb'))
+            # cloudpickle.dump(self, open('./data/generators/{}'.format(filename), 'wb'))
             self.stats = self.call_compute_stat(filename)
         else:
             self.stats = cloudpickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
