@@ -11,6 +11,7 @@ from external.Image_Foveation_Python.retina_transform import foveat_img
 import cv2
 from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixation
 from torchvision.transforms import Normalize
+from generate_datasets.generators.translate_generator import TranslateGenerator
 
 
 def add_salt_pepper_fixation(base_class, type_noise='pepper1', strength=0.5):
@@ -62,6 +63,7 @@ def visual_drop_extension(generator_class, blurring_coeff):
 def finite_extension(base_class, grid_step_size, num_repetitions=1):
     class FiniteTranslationGeneratorMixin(base_class):
         """
+            THIS ONLY WORKS WITH TRANSLATE GENERATOR
             This mixin will disable the random generation, and it will generate samples at fixed locations of a canvas.
             If shuffle is disabled, and num_repetitions is 1, it will pass through each translation, for each class at the time.
             If num_repetitions = n, it will resample that class n times for each translation (useful when each object within a class is
@@ -70,6 +72,8 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
         """
 
         def __init__(self, *args, **kwargs):
+            if not isinstance(base_class, TranslateGenerator):
+                assert False, 'Finite Extension can only extend TranslateGenerator type of generators!'
             self.grid_step_size = grid_step_size
             self.num_repetitions = num_repetitions
             self.mesh_trX, self.mesh_trY, self.mesh_class, self.mesh_rep = [], [], [], []

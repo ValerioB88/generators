@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+
+
 class SaltPepperNoiseFixation():
     def __init__(self, type_noise='pepper1', strength=0.2, size_canvas=(224, 224)):
         self.strength = strength # from 0 to 1
@@ -27,8 +29,6 @@ class SaltPepperNoiseFixation():
                                    for x, y in zip(xx.flatten(), yy.flatten())]).reshape(self.size_canvas)
         distance_frame /= np.max(distance_frame)
         self.distance_frame = torch.tensor(distance_frame)
-
-
 
     def __call__(self, samples, factor=56):
         add_pepper = self.fun(samples)

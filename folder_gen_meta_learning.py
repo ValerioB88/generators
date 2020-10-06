@@ -100,6 +100,7 @@ class NShotTaskSampler(Sampler):
 
             yield np.stack(batch)
 
+
 def do_stuff():
     sampler = partial(NShotTaskSampler, n=2, k=5, q=1)
     multi_folder_omniglot = FolderGenMetaLearning('./data/Omniglot/transparent_white/images_background', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))

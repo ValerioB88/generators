@@ -77,23 +77,23 @@ class FolderGen(TranslateGenerator):
         return canvas, class_name, {'center': random_center}
 
 def do_stuff():
-    # translation = {'S1_SD': TranslationType.LEFT, 'S10_SD': TranslationType.WHOLE}
-    # omn = './data/Omniglot/transparent_white/images_background'
-    # multi_folder_mnist = FolderGen('./data/LeekImages/transparent10/groupA', translation_type=translation, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
-    # dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
-    #
-    # iterator = iter(dataloader)
-    # img, lab, _ = next(iterator)
-    # framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
+    translation = {'S1_SD': TranslationType.LEFT, 'S10_SD': TranslationType.WHOLE}
+    omn = './data/Omniglot/transparent_white/images_background'
+    multi_folder_mnist = FolderGen('./data/LeekImages/transparent10/groupA', translation_type=translation, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), max_iteration_mean_std=10)
+    dataloader = DataLoader(multi_folder_mnist, batch_size=4, shuffle=True, num_workers=1)
 
-    leek_dataset = FolderGen('./data/LeekImages/transparent', translation_type=TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    iterator = iter(dataloader)
+    img, lab, _ = next(iterator)
+    framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
+
+    leek_dataset = FolderGen('./data/LeekImages/transparent', translation_type=TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]), max_iteration_mean_std=10)
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
     framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
-    leek_dataset = FolderGen('./data/LeekImages/grouped', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]))
+    leek_dataset = FolderGen('./data/LeekImages/grouped', translation_type=TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]) , max_iteration_mean_std=10)
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
