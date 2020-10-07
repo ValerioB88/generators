@@ -3,14 +3,13 @@ import numpy as np
 from generate_datasets.generators.input_image_generator import InputImagesGenerator
 
 class TranslateGenerator(InputImagesGenerator):
-    def __init__(self, translation_type, middle_empty,  jitter=0, **kwargs):
+    def __init__(self, translation_type,  jitter=0, **kwargs):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
         super().__init__(**kwargs)
 
         self.translation_type = translation_type
-        self.middle_empty = middle_empty
         self.jitter = jitter
         self.translations_range = {}
         self.p_boxes = {i: [1.0] for i in self.name_classes}
@@ -42,7 +41,6 @@ class TranslateGenerator(InputImagesGenerator):
                                          self.size_object[1],
                                          self.size_canvas,
                                          self.size_object[0],
-                                         self.middle_empty,
                                          jitter=self.jitter)
 
         elif isinstance(transl, tuple) and len(np.array(transl).flatten()) == 2:

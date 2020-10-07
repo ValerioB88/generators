@@ -108,7 +108,7 @@ def do_stuff():
     translation_list = {0: TranslationType.LEFT,
                         5: TranslationType.LEFT}
 
-    dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, translation_type=translation_list, middle_empty=False, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
+    dataset = ScrambledDummyFaceRandomGenerator(scrambling_list, translation_type=translation_list, background_color_type=BackGroundColorType.RANDOM, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

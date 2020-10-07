@@ -31,7 +31,7 @@ class LeekGenerator(FolderGen):
     def _get_my_item(self, idx, label):
         name_class_selected = self.name_classes[label]
         choice_image = np.random.choice(self.group[name_class_selected])
-        canvas, random_center = self._transpose_selected_image(choice_image, label, idx)
+        canvas, random_center = self._transpose(choice_image, label, idx)
         return canvas, label, {'center': random_center, 'image_name': choice_image}
 
 import re
@@ -60,7 +60,7 @@ class LeekGeneratorDoubleSide(LeekGenerator):
         return x, y
 
 def do_stuff():
-    leek_dataset = LeekGeneratorDoubleSide('./data/LeekImages_transparent', (198, 112), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50), type_double=0)
+    leek_dataset = LeekGeneratorDoubleSide('./data/LeekImages_transparent', (198, 112), background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50), type_double=0)
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
@@ -68,21 +68,21 @@ def do_stuff():
 
     framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=os.path.splitext(lab)[0], title_more=more['image_name'])
 
-    leek_dataset = LeekGenerator('./data/LeekImages_transparent', TranslationType.LEFT, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
+    leek_dataset = LeekGenerator('./data/LeekImages_transparent', TranslationType.LEFT, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
     framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
-    leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
+    leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150), background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
     framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
 
-    leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150, 223, 224), middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
+    leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150, 223, 224), background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)

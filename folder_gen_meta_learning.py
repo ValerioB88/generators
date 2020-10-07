@@ -50,7 +50,7 @@ class FolderGenMetaLearning(FolderGen):
     def _get_my_item(self, idx, label):
         image_name = self.samples[label][idx[1]]
 
-        canvas, random_center = self._transpose_selected_image(image_name, label, idx)
+        canvas, random_center = self._transpose(image_name, label, idx)
         # the label returned are the class labels (not the one used for meta-learning, those are done in the training step)
         return canvas, label, {'center': random_center}
 
@@ -103,7 +103,7 @@ class NShotTaskSampler(Sampler):
 
 def do_stuff():
     sampler = partial(NShotTaskSampler, n=2, k=5, q=1)
-    multi_folder_omniglot = FolderGenMetaLearning('./data/Omniglot/transparent_white/images_background', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
+    multi_folder_omniglot = FolderGenMetaLearning('./data/Omniglot/transparent_white/images_background', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
     dataloader = DataLoader(multi_folder_omniglot, batch_sampler=sampler(dataset=multi_folder_omniglot), num_workers=1)
 
     iterator = iter(dataloader)
@@ -111,7 +111,7 @@ def do_stuff():
     framework_utils.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
 
     sampler = partial(NShotTaskSampler, n=3, k=2, q=2)
-    multi_folder_omniglot = FolderGenMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
+    multi_folder_omniglot = FolderGenMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
     dataloader = DataLoader(multi_folder_omniglot, batch_sampler=sampler(dataset=multi_folder_omniglot), num_workers=1)
 
     iterator = iter(dataloader)

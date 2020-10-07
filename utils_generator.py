@@ -16,7 +16,7 @@ def get_background_color(background_type):
     return background_color
 
 
-def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, middle_empty, jitter=0):
+def get_range_translation(translation_type, size_object_y, size_canvas, size_object_x, jitter=0):
     # translation here is always [minX, maxX), [minY, maxY)
     # sy = size_object_y / 10
     # sx = size_object_x / 10
@@ -24,13 +24,13 @@ def get_range_translation(translation_type, size_object_y, size_canvas, size_obj
     sy = 0
     if translation_type == TranslationType.LEFT:
         minX = int(size_object_x / 2 + sx)
-        maxX = int(size_canvas[0] / 2 - ((size_object_x / 2) if middle_empty else 0))
+        maxX = int(size_canvas[0] / 2 - 0)  # ((size_object_x / 2) if middle_empty else 0))
         minY = int(size_object_y / 2 + sy)
         maxY = int(size_canvas[1] - size_object_y / 2 - sy)
 
     elif translation_type == TranslationType.RIGHT:
         # we use that magic pixel to make the values exactly the same when right or whole canvas
-        minX = int(size_canvas[0] / 2 + ((size_object_x / 2) if middle_empty else 0) - 1)
+        minX = int(size_canvas[0] / 2 + 0)  # ((size_object_x / 2) if middle_empty else 0) - 1)
         maxX = int(size_canvas[0] - size_object_x / 2 - sx)
         minY = int(size_object_y / 2 + sy)
         maxY = int(size_canvas[1] - size_object_y / 2 - sy)
@@ -107,8 +107,8 @@ def split_canvas_in_n_grids(num_classes, size_canvas, buffer=0):
 
     return grids
 
-def get_translation_values(translation_type, length_face, size_canvas, width_face, grid_size, middle_empty):
-    minX, maxX, minY, maxY = get_range_translation(translation_type, length_face, size_canvas, width_face, middle_empty)
+def get_translation_values(translation_type, length_face, size_canvas, width_face, grid_size):
+    minX, maxX, minY, maxY = get_range_translation(translation_type, length_face, size_canvas, width_face)
     trX, trY = np.meshgrid(np.arange(minX, maxX, grid_size),
                            np.arange(minY, maxY,  grid_size))
 

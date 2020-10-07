@@ -12,7 +12,7 @@ import cv2
 from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixation
 from torchvision.transforms import Normalize
 from generate_datasets.generators.translate_generator import TranslateGenerator
-
+from generate_datasets.generators.folder_translation_generator import FolderGen
 
 def add_salt_pepper_fixation(base_class, type_noise='pepper1', strength=0.5):
     class AddSaltPepperNoiseFixation(base_class):
@@ -72,7 +72,7 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
         """
 
         def __init__(self, *args, **kwargs):
-            if not isinstance(base_class, TranslateGenerator):
+            if not issubclass(base_class, TranslateGenerator):
                 assert False, 'Finite Extension can only extend TranslateGenerator type of generators!'
             self.grid_step_size = grid_step_size
             self.num_repetitions = num_repetitions
@@ -147,16 +147,17 @@ def random_resize_extension(base_class, low_val=1.0, high_val=1.0):
         def _resize(self, image: Image):
             if self.size_object is not None:
                 resize_factor = np.random.uniform(self.low_val, self.high_val)
-                image = image.resize((int(self.size_object[0] * resize_factor),
-                                     int(self.size_object[1] * resize_factor)))
-            return image
+                new_size = (int(self.size_object[0] * resize_factor),
+                            int(self.size_object[1] * resize_factor))
+                image = image.resize(new_size)
+            return image, new_size
     return RandomResize
 
 
 def do_stuff():
     # extended_class = finite_extension(DummyFaceRandomGenerator, grid_size=2, num_repetitions=2)
     #
-    # mnist_dataset = extended_class(translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, length_face=50)
+    # mnist_dataset = extended_class(translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, length_face=50)
     # dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
     #
     # for i, data in enumerate(dataloader):
@@ -168,28 +169,29 @@ def do_stuff():
     #                     1: TranslationType.RIGHT}
     #
     # extension = finite_extension(grid_size=8, num_repetitions=1, base_class=DummyFaceRandomGenerator)
-    # dataset = extension(translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, middle_empty=True, grayscale=False, name_generator='prova')
+    # dataset = extension(translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, grayscale=False, name_generator='prova')
     # dataloader = DataLoader(dataset, batch_size=16, shuffle=False, num_workers=0)
     #
     # for i, data in enumerate(dataloader):
     #     img, lab, _ = data
-    #     vis.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    #     framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
 
 
-    # extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
-    #                                          base_class=foveate_extension(blurring_coeff=1.5,
-    #                                          base_class=finite_extension(FolderGen, grid_size=50, num_repetitions=2)))
+    extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
+                                             base_class=foveate_extension(blurring_coeff=1.5,
+                                             base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2))
+    )
 
     # extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
-    # mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
-    # dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
+    mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50), max_iteration_mean_std=10)
+    dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
-    # for i, data in enumerate(dataloader):
-    #     img, lab, _ = data
-    #     vis.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+    for i, data in enumerate(dataloader):
+        img, lab, _ = data
+        framework_utils.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
 
     extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
-    mnist_dataset = extended_class(folder='./data/LeekImages/transparenc', translation_type=TranslationType.WHOLE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
+    mnist_dataset = extended_class(folder='./data/LeekImages/transparenc', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
     extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
@@ -197,7 +199,7 @@ def do_stuff():
                                                                           base_class=finite_extension(grid_step_size=50, num_repetitions=1,
                                                                                                       base_class=FolderGen)))
 
-    mnist_dataset = extended_class(folder='./data/MNIST/png/training', translation_type=TranslationType.HLINE, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
+    mnist_dataset = extended_class(folder='./data/MNIST/png/training', translation_type=TranslationType.HLINE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
 
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
@@ -209,7 +211,7 @@ def do_stuff():
                         1: TranslationType.RIGHT}
     extension = finite_extension(grid_step_size=10, num_repetitions=1, base_class=LeekGenerator)
 
-    leek_dataset = extension(folder='./data/LeekImages/transparent', translation_type=translation_list, middle_empty=False, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
+    leek_dataset = extension(folder='./data/LeekImages/transparent', translation_type=translation_list, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=0)
 
     for i, data in enumerate(dataloader):
