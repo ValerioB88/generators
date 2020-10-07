@@ -54,7 +54,7 @@ class FolderGen(TranslateGenerator):
 
     def _finalize_init(self):
         super()._finalize_init()
-        print('Created Dataset from folder: {}, {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
+        print('Created Dataset from folder: {}, {}, {}'.format(self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))  if self.verbose else None
 
     def _define_num_classes_(self):
         return len(self.samples)
@@ -82,21 +82,21 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_mnist.stats['mean'], multi_folder_mnist.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_mnist.stats, title_lab=lab)
 
     leek_dataset = FolderGen('./data/LeekImages/transparent', translation_type=TranslationType.LEFT, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]), max_iteration_mean_std=10)
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
 
     leek_dataset = FolderGen('./data/LeekImages/grouped', translation_type=TranslationType.LEFT, background_color_type=BackGroundColorType.RANDOM, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=np.array([50, 50]) , max_iteration_mean_std=10)
     dataloader = DataLoader(leek_dataset, batch_size=4, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
 
 
 if __name__ == '__main__':

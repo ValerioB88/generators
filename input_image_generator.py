@@ -10,7 +10,8 @@ import cloudpickle
 
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), max_iteration_mean_std=50):
+    def __init__(self, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), max_iteration_mean_std=50, verbose=True):
+        self.verbose = verbose
         self.max_iteration_mean_std = max_iteration_mean_std
         self.transform = None
         self.name_generator = name_generator
@@ -30,12 +31,11 @@ class InputImagesGenerator(ABC, Dataset):
     def _finalize_init(self):
         self.map_name_to_num = {i: idx for idx, i in enumerate(self.name_classes)}
         self.map_num_to_name = {idx: i for idx, i in enumerate(self.name_classes)}
-
-        print(f'Map class_name -> labels: \n {self.map_name_to_num}')
+        print(f'\nMap class_name -> labels: \n {self.map_name_to_num}') if self.verbose else None
         self.save_stats()
 
     def call_compute_stat(self, filename):
-        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), max_iteration=self.max_iteration_mean_std)
+        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), max_iteration=self.max_iteration_mean_std, verbose=self.verbose)
 
     def save_stats(self):
         """
@@ -89,6 +89,9 @@ class InputImagesGenerator(ABC, Dataset):
             image = image.resize(self.size_object)
         return image, self.size_object
 
+    def _rotate(self, image):
+        return image, 0
+
     def _transpose(self, image, image_name, class_name, idx):
         return image, None
 
@@ -103,8 +106,10 @@ class InputImagesGenerator(ABC, Dataset):
         # _get_image returns a PIL image
         image, image_name = self._get_image(idx, class_name)
         image, new_size = self._resize(image)
+        image, rotate = self._rotate(image)
+
         canvas, random_center = self._transpose(image, image_name, class_name, idx)
-        more = {'center': random_center, 'size': new_size}
+        more = {'center': random_center, 'size': new_size, 'rotation': rotate}
         # canvas, class_name, more = self._get_my_item(idx, class_name)
         # get my item must return a PIL image
         canvas, class_name, more = self._finalize_get_item(canvas, class_name, more)

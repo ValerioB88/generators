@@ -11,32 +11,33 @@ from generate_datasets.generators.utils_generator import TranslationType, BackGr
 from torch.utils.data import Sampler
 from generate_datasets.generators.folder_translation_generator import FolderGen
 import warnings
+import PIL.Image as Image
+
 
 class FolderGenMetaLearning(FolderGen):
-    def __init__(self, folder, translation_type_training, translation_type_test, sampler, middle_empty, background_color_type: BackGroundColorType, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), jitter=20):
+    def __init__(self, folder, translation_type_training, translation_type_test, sampler, **kwargs):
         self.translation_type_test = translation_type_test
-        self.jitter = jitter
         self.sampler = sampler(dataset=self)
-        super().__init__(folder, translation_type_training, middle_empty, background_color_type, name_generator, grayscale, size_canvas, size_object, jitter=jitter)
+        super().__init__(folder, translation_type=translation_type_training, **kwargs)
 
     def _finalize_init(self):
         if self.num_classes < self.sampler.k:
             warnings.warn(f'FolderGen: Number of classes in the folder < k. K will be changed to {self.num_classes}')
             self.sampler.k = self.num_classes
 
-        self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], self.middle_empty, jitter=self.jitter)
+        self.translation_range_test = get_range_translation(self.translation_type_test, self.size_object[1], self.size_canvas, self.size_object[0], jitter=self.jitter)
         super()._finalize_init()
 
     def call_compute_stat(self, filename):
         return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
                                                  data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=1),
-                                                 max_iteration=20)
+                                                 max_iteration=self.max_iteration_mean_std, verbose=self.verbose)
 
     def _get_label(self, idx):
         return idx[0]
 
     def _get_translation(self, label, image_name=None, idx=None):
-        if idx[2] == 0:
+        if idx[2] == '0':
             return self._random_translation(label, image_name)
         else:
             return self._random_translation_test(label, image_name)
@@ -48,7 +49,11 @@ class FolderGenMetaLearning(FolderGen):
         return x, y
 
     def _get_my_item(self, idx, label):
-        image_name = self.samples[label][idx[1]]
+        # we use idx here because it's taken into account by the sampler
+        image_name = self.samples[label][int(idx[1])]
+        # image_name = np.random.choice(self.samples[label])
+        image = Image.open(self.folder + '/' + image_name)
+        return image, image_name
 
         canvas, random_center = self._transpose(image_name, label, idx)
         # the label returned are the class labels (not the one used for meta-learning, those are done in the training step)
@@ -108,7 +113,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, title_lab=lab)
 
     sampler = partial(NShotTaskSampler, n=3, k=2, q=2)
     multi_folder_omniglot = FolderGenMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
@@ -116,7 +121,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_omniglot.stats['mean'], multi_folder_omniglot.stats['std'], title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, title_lab=lab)
 
 
 if __name__ == '__main__':

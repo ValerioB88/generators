@@ -60,7 +60,25 @@ def visual_drop_extension(generator_class, blurring_coeff):
     return VisualAcuityDropGenerator
 
 
+def min_to_max_steps(min, max, grid_step_size):
+    return np.arange(min, max, grid_step_size)
+
+
+def symmetric_steps(min, max, size_canvas, grid_step_size):
+    """
+    Symmetryc step from the center - plus the min and max.
+    """
+    if max > size_canvas[0] // 2 and min < size_canvas[0]:
+        t = np.hstack((np.arange(size_canvas[0] // 2, min, -grid_step_size)[1::][::-1],
+                       np.arange(size_canvas[0] // 2, max, grid_step_size)))
+        t = np.insert(t, 0, min)
+        t = np.insert(t, len(t), max - 1)
+        return np.unique(t)
+    else:
+        return min_to_max_steps(min, max, grid_step_size)
+
 def finite_extension(base_class, grid_step_size, num_repetitions=1):
+
     class FiniteTranslationGeneratorMixin(base_class):
         """
             THIS ONLY WORKS WITH TRANSLATE GENERATOR
@@ -78,43 +96,24 @@ def finite_extension(base_class, grid_step_size, num_repetitions=1):
             self.num_repetitions = num_repetitions
             self.mesh_trX, self.mesh_trY, self.mesh_class, self.mesh_rep = [], [], [], []
             self.current_index = 0
-            self.get_translation_values = self.symmetric_steps
+            self.get_translation_values = symmetric_steps
             super().__init__(*args, **kwargs)
-
-        def min_to_max_steps(self, min, max):
-            return np.arange(min, max, self.grid_step_size)
-
-        def symmetric_steps(self, min, max):
-            '''
-            Symmetryc step from the center - plus the min and max.
-            @param min:
-            @param max:
-            @return:
-            '''
-            if max > self.size_canvas[0] // 2 and min < self.size_canvas[0]:
-                t = np.hstack((np.arange(self.size_canvas[0] // 2, min, -self.grid_step_size)[1::][::-1],
-                           np.arange(self.size_canvas[0] // 2, max, self.grid_step_size)))
-                t = np.insert(t, 0, min)
-                t = np.insert(t, len(t), max - 1)
-                return np.unique(t)
-            else:
-                return self.min_to_max_steps(min, max)
-
 
         def _finalize_init(self):
             for class_name in self.name_classes:
                 minX, maxX, minY, maxY = self.translations_range[class_name]
                 # Recall that maxX should NOT be included (it's [minX, maxX)
-                x, y, c, r = np.meshgrid(self.get_translation_values(minX, maxX),
-                                         self.get_translation_values(minY, maxY),
+                x, y, c, r = np.meshgrid(self.get_translation_values(minX, maxX, self.size_canvas, self.grid_step_size),
+                                         self.get_translation_values(minY, maxY, self.size_canvas, self.grid_step_size),
                                          class_name,
                                          np.arange(self.num_repetitions))
                 self.mesh_trX.extend(x.flatten())
                 self.mesh_trY.extend(y.flatten())
                 self.mesh_class.extend(c.flatten())
                 self.mesh_rep.extend(r.flatten())
-            print('Created Finite Dataset [{}] with {} elements from folder: {}, {}, {}'.format(self.name_generator, self.__len__(), self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
-            print('Elements: X {}, Y {}'.format(self.get_translation_values(minX, maxX), self.get_translation_values(minY, maxY)))
+            if self.verbose:
+                print('Created Finite Dataset [{}] with {} elements from folder: {}, {}, {}'.format(self.name_generator, self.__len__(), self.folder, 'multifolder' if self.multi_folder else 'single folder', self.translation_type_str))
+                print('Elements: X {}, Y {}'.format(self.get_translation_values(minX, maxX, self.size_canvas, self.grid_step_size), self.get_translation_values(minY, maxY, self.size_canvas, self.grid_step_size)))
             super()._finalize_init()
 
         def __len__(self):
@@ -153,6 +152,28 @@ def random_resize_extension(base_class, low_val=1.0, high_val=1.0):
             return image, new_size
     return RandomResize
 
+def random_rotate_extension(base_class, from_d=0, to_d=360):
+    """
+     This works only for FolderTranslationGenerators, not for the dummyfaces!
+    @param base_class:
+    @param from_d:
+    @param to_d:
+    @return:
+    """
+    class RandomRotate(base_class):
+        def __init__(self, *args, **kwargs):
+            self.from_d = from_d
+            self.to_d = to_d
+            assert self.from_d <= self.to_d
+            super().__init__(*args, **kwargs)
+
+        def _rotate(self, image: Image):
+            if self.size_object is not None:
+                rotate = int(np.random.uniform(self.from_d, self.to_d))
+                image = image.rotate(rotate, expand=True)
+            return image, rotate
+    return RandomRotate
+
 
 def do_stuff():
     # extended_class = finite_extension(DummyFaceRandomGenerator, grid_size=2, num_repetitions=2)
@@ -174,22 +195,32 @@ def do_stuff():
     #
     # for i, data in enumerate(dataloader):
     #     img, lab, _ = data
-    #     framework_utils.imshow_batch(img, dataset.stats['mean'], dataset.stats['std'], title_lab=lab)
+    #     framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
 
-
-    extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
-                                             base_class=foveate_extension(blurring_coeff=1.5,
-                                             base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2))
-    )
-
-    # extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
+    extended_class =  random_resize_extension(low_val=0.5, high_val=1.5,
+                                              base_class=random_rotate_extension(from_d=-10, to_d=90,
+                                              base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)))
     mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50), max_iteration_mean_std=10)
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
 
+##
+    extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
+                                             base_class=foveate_extension(blurring_coeff=1.5,
+                                             base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2))
+    )
+
+    mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50), max_iteration_mean_std=10)
+    dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
+
+    for i, data in enumerate(dataloader):
+        img, lab, _ = data
+        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
+
+##
     extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
     mnist_dataset = extended_class(folder='./data/LeekImages/transparenc', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
@@ -205,7 +236,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, mnist_dataset.stats['mean'], mnist_dataset.stats['std'], title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         1: TranslationType.RIGHT}
@@ -216,7 +247,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, leek_dataset.stats['mean'], leek_dataset.stats['std'], title_lab=lab)
+        framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
 
 
 if __name__ == '__main__':
