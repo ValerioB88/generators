@@ -45,7 +45,7 @@ class DummyFaceRandomGenerator(TranslateGenerator):
     def _get_label(self, item):
         return int(np.random.choice(list(self.translations_range.keys())))
 
-    def _get_my_item(self, idx, label):
+    def _get_image(self, idx, label):
         canvas, face_center = self.get_img_id(label, idx)
         label = list(self.translations_range.keys()).index(label)
         return canvas, label, {'center': face_center}

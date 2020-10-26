@@ -28,7 +28,7 @@ class LeekGenerator(FolderGen):
     def _get_label(self, item):
         return np.random.randint(len(self.name_classes))
 
-    def _get_my_item(self, idx, label):
+    def _get_image(self, idx, label):
         name_class_selected = self.name_classes[label]
         choice_image = np.random.choice(self.group[name_class_selected])
         canvas, random_center = self._transpose(choice_image, label, idx)

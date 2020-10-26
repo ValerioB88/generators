@@ -6,26 +6,26 @@ from generate_datasets.generators.utils_generator import get_range_translation, 
 import pathlib
 import os
 import numpy as np
-import cloudpickle
+
 
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), size_object=(50, 50), max_iteration_mean_std=50, verbose=True):
+    def __init__(self, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), max_iteration_mean_std=50, verbose=True):
         self.verbose = verbose
         self.max_iteration_mean_std = max_iteration_mean_std
         self.transform = None
         self.name_generator = name_generator
         self.stats = {}
         self.grayscale = grayscale
-        self.size_canvas = size_canvas
-        self.size_object = size_object  # x and y
+
+        self.size_canvas = size_canvas  # x and y
         self.background_color_type = background_color_type
         self.num_classes = self._define_num_classes_()
         if not self.num_classes:
             assert False, 'Dataset has no classes!'
-        if not hasattr(self, 'num_classes'):
+        if not hasattr(self, 'name_classes'):
             self.name_classes = [str(i) for i in range(self.num_classes)]
-        self.size_object = self.size_object if self.size_object is not None else (0, 0)
+
         self.stats = None
 
     def _finalize_init(self):
@@ -65,7 +65,7 @@ class InputImagesGenerator(ABC, Dataset):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_image(self, idx, class_name):
+    def _get_image(self, idx, class_name):  #-> Tuple[Image, str]:
         raise NotImplementedError
 
     def __len__(self):
@@ -87,13 +87,13 @@ class InputImagesGenerator(ABC, Dataset):
     def _resize(self, image):
         if self.size_object is not None:
             image = image.resize(self.size_object)
-        return image, self.size_object
+        return image, (self.size_object if self.size_object is not None else -1)
 
     def _rotate(self, image):
         return image, 0
 
     def _transpose(self, image, image_name, class_name, idx):
-        return image, None
+        return image, (-1, -1)
 
     def __getitem__(self, idx):
         """

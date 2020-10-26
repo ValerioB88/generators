@@ -48,17 +48,6 @@ class FolderGenMetaLearning(FolderGen):
         y = np.random.randint(minY, maxY)
         return x, y
 
-    def _get_my_item(self, idx, label):
-        # we use idx here because it's taken into account by the sampler
-        image_name = self.samples[label][int(idx[1])]
-        # image_name = np.random.choice(self.samples[label])
-        image = Image.open(self.folder + '/' + image_name)
-        return image, image_name
-
-        canvas, random_center = self._transpose(image_name, label, idx)
-        # the label returned are the class labels (not the one used for meta-learning, those are done in the training step)
-        return canvas, label, {'center': random_center}
-
 class NShotTaskSampler(Sampler):
     warning_done = False
 

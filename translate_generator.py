@@ -3,12 +3,12 @@ import numpy as np
 from generate_datasets.generators.input_image_generator import InputImagesGenerator
 
 class TranslateGenerator(InputImagesGenerator):
-    def __init__(self, translation_type,  jitter=0, **kwargs):
+    def __init__(self, translation_type,  jitter=0, size_object=(50, 50), **kwargs):
         """
         @param translation_type: could either be one TypeTranslation, or a dict of TypeTranslation (one for each class), or a tuple of two elements (x and y for the translated location) or a tuple of 4 elements (minX, maxX, minY, maxY)
         """
         super().__init__(**kwargs)
-
+        self.size_object = size_object
         self.translation_type = translation_type
         self.jitter = jitter
         self.translations_range = {}
