@@ -2,7 +2,7 @@ from torchvision import transforms
 from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
-from generate_datasets.generators.utils_generator import get_range_translation, TranslationType
+from generate_datasets.generators.utils_generator import get_range_translation, TranslationType, BackGroundColorType
 import pathlib
 import os
 import numpy as np
@@ -10,7 +10,7 @@ import numpy as np
 
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type, name_generator='', grayscale=False, size_canvas=(224, 224), max_iteration_mean_std=50, verbose=True):
+    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_canvas=(224, 224), max_iteration_mean_std=50, verbose=True):
         self.verbose = verbose
         self.max_iteration_mean_std = max_iteration_mean_std
         self.transform = None

@@ -13,11 +13,12 @@ from typing import Tuple
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 import os
 import atexit
+from abc import ABC, abstractmethod
 
 class UnityGenMetaLearning(InputImagesGenerator):
-    def __init__(self, name_dataset_unity=None, sampler=None, **kwargs):
+    def __init__(self, name_dataset_unity, unity_env_params=None, sampler=None, **kwargs):
         super().__init__(**kwargs)
-        self.sampler = sampler(name_dataset_unity=name_dataset_unity, dataset=self)
+        self.sampler = sampler(dataset=self, unity_env_params=unity_env_params, name_dataset_unity=name_dataset_unity)
         super()._finalize_init()
         # atexit.register(self.sampler.env.close())
 
@@ -52,13 +53,53 @@ class UnityGenMetaLearning(InputImagesGenerator):
         return Image.fromarray((image * 255).astype(np.uint8)), image_name
 
 
+class EnvironmentParameters(ABC):
+    def __init__(self, channel):
+        # Default Params
+        self.distance = 4
+        self.min_degree_support_query_cameras = 0
+        self.max_degree_support_query_cameras = 10
+        self.increase_degree = 1
+
+        self._init_params()
+
+        self.channel = channel
+        self.count_increase = 0
+        self.max_number_levels = (180 - self.max_degree_support_query_cameras) / self.increase_degree
+        self.send_channel_info()
+
+    def send_channel_info(self):
+        self.channel.set_float_parameter("distance", float(self.distance))
+        self.channel.set_float_parameter("minDegreeSQcameras", float(self.min_degree_support_query_cameras))
+        self.channel.set_float_parameter("maxDegreeSQcameras", float(self.max_degree_support_query_cameras))
+
+    @abstractmethod
+    def _init_params(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _next_level(self):
+      raise NotImplementedError
+
+    def next_level(self, *args, **kwargs):
+        # self.distance += 2
+        self.count_increase += 1
+        self._next_level()
+        print(f'\t **Increase {self.count_increase}; distance {self.distance}; minDegreeCam {self.min_degree_support_query_cameras}; maxDegreeCam {self.max_degree_support_query_cameras}')
+        self.send_channel_info()
+        if self.count_increase > self.max_number_levels:
+            return False
+        else:
+            return True
+
+
 class UnitySampler(Sampler):
     """
     This sampler takes the samples from the UniyScene
     """
     warning_done = False
 
-    def __init__(self, dataset, name_dataset_unity, n, k, q, num_tasks=1, episodes_per_epoch=999999, channel=0, disjoint_train_and_test=True):
+    def __init__(self, dataset, name_dataset_unity, unity_env_params, n, k, q, num_tasks=1, episodes_per_epoch=999999, channel=0, disjoint_train_and_test=True):
         # super(NShotTaskSampler, self).__init__(unity_env)
         self.episodes_per_epoch = episodes_per_epoch
         self.dataset = dataset  # may be useful later on
@@ -69,40 +110,46 @@ class UnitySampler(Sampler):
         self.k = k
         self.n = n
         self.q = q
-        build_win = 0
-        if os.name == 'nt':
-            machine_name = 'win'
-            ext = 'exe'
+        if name_dataset_unity is None:
+            self.scene = None
+            channel = 0
         else:
-            machine_name = 'linux'
-            ext = 'x86_64'
-        self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/MetaLearning/'
-        self.scene_folder = f'N{n}_K{k}_Q{q}_sc{dataset.size_canvas[0]}_d{name_dataset_unity}'
-        self.scene = f'{self.scene_path}/{self.scene_folder}/scene.{ext}'
-        if not os.path.exists(self.scene):
-            assert False, f"Unity scene {self.scene} generator does not exist, create it in windows!"
+            if os.name == 'nt':
+                machine_name = 'win'
+                ext = 'exe'
+            else:
+                machine_name = 'linux'
+                ext = 'x86_64'
+            self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/MetaLearning/'
+            self.scene_folder = f'N{n}_K{k}_Q{q}_sc{dataset.size_canvas[0]}_d{name_dataset_unity}'
+            self.scene = f'{self.scene_path}/{self.scene_folder}/scene.{ext}'
+            if not os.path.exists(self.scene):
+                assert False, f"Unity scene {self.scene} generator does not exist, create it in windows!"
+
         log.set_log_level('INFO')
 
         side_channel = EnvironmentParametersChannel()
 
         self.env = UnityEnvironment(file_name=self.scene, side_channels=[side_channel], no_graphics=False, worker_id=channel)
-        # channel.set_float_parameter("N_shot", self.n)
 
+        self.env_params = unity_env_params(side_channel)
         self.env.reset()
         self.behaviour_names = list(self.env.behavior_specs.keys())
-        # self.behaviour_specs = self.env.behavior_specs[self.behaviour_names[0]]
+
 
     def __len__(self):
         return self.episodes_per_epoch
 
     def __iter__(self):
         for _ in range(self.episodes_per_epoch):
+
             batch = []  # batch is [image, label, train/test (0/1)]
             # ToDo: add each batch in a list and then return a stack of it
             for task in range(self.num_tasks):
                 # Get random classes
                 self.env.step()
                 DS, TS = self.env.get_steps(self.behaviour_names[0])
+
                 # when agent receives an action, it setups a new batch
                 self.env.set_actions(self.behaviour_names[0], np.array([[1]]))  # just give a random thing as an action, it doesn't matter here
                 labels = DS.obs[-1].astype(int)
