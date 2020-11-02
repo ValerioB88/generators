@@ -31,7 +31,7 @@ def foveate_extension(base_class, blurring_coeff=0.248):
             self.blurring_coeff = blurring_coeff
             super().__init__(*args, **kwargs)
 
-        def _finalize_get_item(self, canvas: Image, label, more):
+        def _finalize_get_item(self, canvas: Image, label, more, idx):
             canvas, label, more = super()._finalize_get_item(canvas, label, more)
             # convert PIL to opencv
             open_cv_image = np.array(canvas)
@@ -51,7 +51,7 @@ def visual_drop_extension(generator_class, blurring_coeff):
             self.blurring_coeff = blurring_coeff
             super().__init__(*args, **kwargs)
 
-        def _finalize_get_item(self, canvas: Image, label, more):
+        def _finalize_get_item(self, canvas: Image, label, more, idx):
             canvas, label, more =  super()._finalize_get_item(canvas, label, more)
             distance_from_center = np.linalg.norm(np.array(more['center']) - np.array(self.size_canvas) / 2)
             canvas = canvas.filter(ImageFilter.GaussianBlur(distance_from_center * self.blurring_coeff))

@@ -75,7 +75,7 @@ class InputImagesGenerator(ABC, Dataset):
     # def _get_my_item(self, item, label):
     #     raise NotImplementedError
 
-    def _finalize_get_item(self, canvas, class_name, more):
+    def _finalize_get_item(self, canvas, class_name, more, idx=0):
         return canvas, class_name, more
 
     def _get_label(self, idx):
@@ -112,7 +112,7 @@ class InputImagesGenerator(ABC, Dataset):
         more = {'center': random_center, 'size': new_size, 'rotation': rotate}
         # canvas, class_name, more = self._get_my_item(idx, class_name)
         # get my item must return a PIL image
-        canvas, class_name, more = self._finalize_get_item(canvas, class_name, more)
+        canvas, class_name, more = self._finalize_get_item(canvas, class_name, more, idx)
 
         if self.transform is not None:
             canvas = self.transform(canvas)
