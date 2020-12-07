@@ -120,3 +120,28 @@ class InputImagesGenerator(ABC, Dataset):
             canvas = np.array(canvas)
 
         return canvas, self.map_name_to_num[class_name], more
+
+
+# class InputImagesGenerator3D(InputImagesGenerator):
+#     def __getitem__(self, idx):
+#         self._prepare_get_item(idx)
+#         class_name = self._get_label(idx)
+#
+#         # _get_image returns a PIL image
+#         image, image_name = self._get_image(idx, class_name)
+#         image, new_size = self._resize(image)
+#         image, rotate = self._rotate(image)
+#
+#         canvas, random_center = self._transpose(image, image_name, class_name, idx)
+#         more = {}
+#         # more = {'center': random_center, 'size': new_size, 'rotation': rotate}
+#         # canvas, class_name, more = self._get_my_item(idx, class_name)
+#         # get my item must return a PIL image
+#         canvas, class_name, more = self._finalize_get_item(canvas, class_name, more, idx)
+#
+#         if self.transform is not None:
+#             canvas = self.transform(canvas)
+#         else:
+#             canvas = np.array(canvas)
+#
+#         return canvas, self.map_name_to_num[class_name], more

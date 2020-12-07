@@ -7,7 +7,7 @@ from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mea
 from torch.utils.data import DataLoader
 import numpy as np
 from scipy.spatial.transform import Rotation
-import copy
+
 from torch.utils.data import Sampler
 import warnings
 import PIL.Image as Image
@@ -26,6 +26,8 @@ from mlagents_envs.side_channel.side_channel import (
 )
 import numpy as np
 import uuid
+from enum import Enum
+
 
 # Create the StringLogChannel class
 class StringLogChannel(SideChannel):
@@ -44,6 +46,7 @@ class StringLogChannel(SideChannel):
 
 class StringEnvParamsChannel(StringLogChannel):
     def on_message_received(self, msg: IncomingMessage) -> None:
+        print("PROVA")
         self.num_objects = int(str.split(msg.read_string(), '_')[0])
 
 
@@ -73,10 +76,12 @@ class UnityGenMetaLearning(InputImagesGenerator):
 
     def _finalize_get_item(self, canvas, class_name, more, idx):
         more['camera_positions'] = idx[2]
+        more['labels'] = idx[1]
         return canvas, class_name, more
 
     def _get_label(self, idx):
-        return str(idx[1])
+        # return str(idx[1])
+        return '0'
 
     def _define_num_classes_(self):
         return self.sampler.num_objects  # ToDo: make this something we would get from a unity channel
@@ -176,19 +181,39 @@ class UnitySamplerMetaLearning(Sampler):
             yield batch
 
 
+class TestType(Enum):
+    INTERPOLATE = 0
+    EXTRAPOLATE = 1
+    ORTHOGONAL = 3
+
+
+
 class UnitySamplerSequenceLearning(Sampler):
     """
     This sampler takes the samples from the UniyScene
     """
     warning_done = False
 
-    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, episodes_per_epoch=999999, channel=0, disjoint_train_and_test=True):
-        # super(NShotTaskSampler, self).__init__(unity_env)
+    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, episodes_per_epoch=999999, channel=0, test_mode: TestType =None):
+        """
+        @param k: number of objects used .the number of matching pairs will depends on the test flag. If it's in testing mode,
+         we do one matching pair for each k (only implemented for k=1 for now). Which means that total matching pair = k, total number of labels passed is k * 2.
+        @param test_mode: For now @test_mode is a special flag that does several stuff useful for testing:
+         1) the camera positions are passed by python, not generated in unity.
+         2) k = number of matching comparisons, e.g. with k=1 we spawn two objects (may be the same) and compare between them.
+            2) implies a different setup for passing the labels. k * 2 labels are passed.
+        TODO: In the future we should test if this can be the default setup in terms of speed of computation, as it is much cleared.
+        If test = 0 we make k * k comparison: each object in the scene is compared with every other.
+        """
         self.episodes_per_epoch = episodes_per_epoch
         self.dataset = dataset  # may be useful later on
+        self.test_mode = test_mode  # None, or TestType
+        self.k = k
 
         # TODO: Raise errors if initialise badly
-        self.k = k
+        if self.test_mode and self.k != 1:
+            print(f"TestMode only supported for k=1. K was = {self.k}, it will be changed to 1")
+            self.k = 1
         self.nSc = nSc
         self.nSt = nSt
         self.nFc = nFc
@@ -203,7 +228,7 @@ class UnitySamplerSequenceLearning(Sampler):
             else:
                 machine_name = 'linux'
                 ext = 'x86_64'
-            self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/SequenceLearning/'
+            self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/SequenceLearning{"_testMode" if test_mode else ""}/'
             self.scene_folder = f'k{self.k}_nSt{self.nSt}_nSc{self.nSc}_nFt{self.nFt}_nFc{self.nFc}_sc{size_canvas[0]}'
             self.scene = f'{self.scene_path}/{self.scene_folder}/scene.{ext}'
             if not os.path.exists(self.scene):
@@ -227,73 +252,102 @@ class UnitySamplerSequenceLearning(Sampler):
 
         self.behaviour_names = list(self.env.behavior_specs.keys())
         self.num_objects = env_params_channel.num_objects
-        self.tot_num_frame_each_iter = self.nSt * self.nFt + self.k * (self.nSc * self.nFc)
 
-        # _, self.ax = framework_utils.create_sphere()
+        _, self.ax = framework_utils.create_sphere()
+        if self.test_mode:
+            self.ranges = []
+            self.matrix_values = []
+            self.tot_num_frame_each_iter = self.nSt * self.nFt + self.nSc * self.nFc
+            self.tot_num_matching = self.k
+            self.num_labels_passed_by_unity = self.k * 2 # one for each object k, the other for its matching pair
+            self.organize_test_values()
+        else:
+            self.tot_num_frame_each_iter = self.k * (self.nSt * self.nFt + self.nSc * self.nFc)
+            self.tot_num_matching = self.k * self.k
+            self.num_labels_passed_by_unity = self.k
+
+    def organize_test_values(self):
+        self.range = []
+        self.num_repetitions_each = 20;
+        self.observation_channel.set_float_parameter("test_type", float(self.test_mode.value))
+
+        if self.test_mode == TestType.INTERPOLATE:
+            self.ranges = np.arange(0, -90 - 15, -15)
+
+        if self.test_mode == TestType.EXTRAPOLATE or self.test_mode == TestType.ORTHOGONAL:
+            self.ranges = np.arange(0, 90 + 15, 15)
+
+        obj1, obj2, deg, rot = np.meshgrid(np.arange(self.num_objects), np.arange(self.num_objects), self.ranges, np.arange(0, 360, 15))
+        self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten()))
+        # np.random.shuffle(self.matrix_values.T)
+        self.episodes_per_epoch = self.matrix_values.shape[1]
+
 
     def __len__(self):
         return self.episodes_per_epoch
 
+    def send_test_info(self, i):
+        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
+        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
+        self.observation_channel.set_float_parameter("degree", float(self.matrix_values[2, i]))
+        self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[3, i]))
+
+
     def __iter__(self):
+        labels = np.empty((self.tot_num_frame_each_iter, 2), np.int)
+        labels[:] = 0
+        camera_positions = np.empty((self.tot_num_frame_each_iter))
+        camera_positions[:] = 0
+        vh1, vh2, vh3 = None, None, None
+        for idx in range(self.episodes_per_epoch):
+            if self.test_mode is not None:
+                self.send_test_info(idx)
 
-        vh1, vh2, vh3 = [], [], []
-        batch = []  # batch is [image, labels (real labels), support0/query1, positioncamera X, Y, Z]
-        self.num_tasks = 10
-        for _ in range(self.episodes_per_epoch):
-            images_list = []
-            labels_list = []
-            camera_positions_list = []
-            for _ in range(self.num_tasks):
-                # self.env_params.send_channel_info()
-                # ToDo: add each batch in a list and then return a stack of it
-                # Get random classes
-                labels = np.empty((self.tot_num_frame_each_iter), np.int)
-                labels[:] = 0
-                camera_positions = np.empty((self.tot_num_frame_each_iter))
-                camera_positions[:] = 0
+            batch = []  # batch is [image, labels (real labels), support0/query1, positioncamera X, Y, Z]
+            # ToDo: add each batch in a list and then return a stack of it
+            # Get random classes
+            self.env.step()
+            self.observation_channel.set_float_parameter("newLevel", float(0))
 
-                self.env.step()
-                self.observation_channel.set_float_parameter("newLevel", float(0))
+            DS, TS = self.env.get_steps(self.behaviour_names[0])
 
-                DS, TS = self.env.get_steps(self.behaviour_names[0])
+            # when agent receives an action, it setups a new batch
+            self.env.set_actions(self.behaviour_names[0], np.array([[1]]))  # just give a random thing as an action, it doesn't matter here
+            if self.test_mode:
+                camera_positions = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
 
-                # when agent receives an action, it setups a new batch
-                self.env.set_actions(self.behaviour_names[0], np.array([[1]]))  # just give a random thing as an action, it doesn't matter here
+                labels[:self.tot_num_matching] = DS.obs[-1][0][:self.num_labels_passed_by_unity].astype(int)
+                # camera_positions[:len(self.matrix_values[:, idx])] = self.matrix_values[:, idx]
 
-                labels[:self.k + 1] = DS.obs[-1][0][:self.k + 1].astype(int) # this includes the correct choice (first value, [0, k]) and the "real" labels of the objects
+            else:
+                # labels[:self.k] = DS.obs[-1][0][:self.k].astype(int)
+                all_labels = DS.obs[-1][0][:self.num_labels_passed_by_unity].astype(int)
+                x, y = np.meshgrid(all_labels, all_labels)
+                labels[:self.tot_num_matching] = np.vstack((x.flatten(), y.flatten())).T
 
-                camera_positions = DS.obs[-1][0][1 + self.k:].reshape((-1, 3))
-                images = DS.obs[:-1]
+                camera_positions = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
 
 
-                labels_list.extend(labels)
-                camera_positions_list.extend(camera_positions)
-                images_list.extend(images)
-    ##
-                # if vh1 != []:
-                #     [i.remove() for i in vh1]
-                #     [i.remove() for i in vh2]
-                #     vh1 = []
-                #     vh2 = []
-                #
-                # def unity2python(v):
-                #     v = copy.deepcopy(v)
-                #     v.T[[1, 2]] = v.T[[2, 1]]
-                #     return v
-                #
-                # camera_positions_candidates = camera_positions[:self.k * self.nFc * self.nSc]
-                # camera_positions_trainings = camera_positions[self.k * self.nFc * self.nSc:]
-                # #
-                # tr = unity2python(camera_positions_trainings[0])
-                # vh1.append(framework_utils.add_norm_vector(tr, ax=self.ax, col='g'))
-                # for i in camera_positions_candidates:
-                #     cand = unity2python(i)
-                #     vh2.append(framework_utils.add_norm_vector(cand, ax=self.ax, col='k'))
-                #     ali = framework_utils.align_vectors(cand, tr)
-                #     vh3 = framework_utils.add_norm_vector(ali, ax=self.ax, col='r')
+            images = DS.obs[:-1]
+            #
+            # c = camera_positions[0:3]
+            #
+            # t = camera_positions[6:9]
+            # c[1], c[2] = c[2], c[1]
+            # t[1], t[2] = t[2], t[1]
+            #
+            #
+            # if vh1 is not None:0
+            #     vh1.remove()
+            #     vh2.remove()
+            # vh1 = framework_utils.add_norm_vector(c, 'k', ax=self.ax)
+            # vh2 = framework_utils.add_norm_vector(t, 'k', ax=self.ax )
+            # ali = framework_utils.align_vectors(c, t)
+            # vh3 = framework_utils.add_norm_vector(ali, 'r', ax=self.ax )
 
-    ############################
-            batch = list((im[0], lb, cp) for im, lb, cp in zip(images_list, labels_list, camera_positions_list))
+
+
+            batch = list((im[0], lb, cp) for im, lb, cp in zip(images, labels, camera_positions))
             yield batch
 
 # # ##
@@ -302,7 +356,7 @@ class UnitySamplerSequenceLearning(Sampler):
 # vh2.remove()
 # # vh3.remove()
 
-# # # ##
+#batch # # ##
 #
 
 ##
