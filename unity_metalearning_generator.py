@@ -266,6 +266,8 @@ class UnitySamplerSequenceLearning(Sampler):
             self.tot_num_matching = self.k * self.k
             self.num_labels_passed_by_unity = self.k
 
+        self.max_length_elements = np.max((self.tot_num_matching, self.tot_num_frame_each_iter))
+
     def organize_test_values(self):
         self.range = []
         self.num_repetitions_each = 20;
@@ -294,9 +296,10 @@ class UnitySamplerSequenceLearning(Sampler):
 
 
     def __iter__(self):
-        labels = np.empty((self.tot_num_frame_each_iter, 2), np.int)
+        labels = np.empty((self.max_length_elements, 2), np.int)
+        images = np.empty((self.max_length_elements, 1, 64, 64, 3))
         labels[:] = 0
-        camera_positions = np.empty((self.tot_num_frame_each_iter))
+        camera_positions = np.empty((self.max_length_elements, 3))
         camera_positions[:] = 0
         vh1, vh2, vh3 = None, None, None
         for idx in range(self.episodes_per_epoch):
@@ -314,7 +317,7 @@ class UnitySamplerSequenceLearning(Sampler):
             # when agent receives an action, it setups a new batch
             self.env.set_actions(self.behaviour_names[0], np.array([[1]]))  # just give a random thing as an action, it doesn't matter here
             if self.test_mode:
-                camera_positions = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
+                camera_positions[:self.tot_num_frame_each_iter] = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
 
                 labels[:self.tot_num_matching] = DS.obs[-1][0][:self.num_labels_passed_by_unity].astype(int)
                 # camera_positions[:len(self.matrix_values[:, idx])] = self.matrix_values[:, idx]
@@ -325,10 +328,10 @@ class UnitySamplerSequenceLearning(Sampler):
                 x, y = np.meshgrid(all_labels, all_labels)
                 labels[:self.tot_num_matching] = np.vstack((x.flatten(), y.flatten())).T
 
-                camera_positions = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
+                camera_positions[:self.tot_num_frame_each_iter] = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((-1, 3))
 
-
-            images = DS.obs[:-1]
+            assert np.shape(DS.obs[:-1])[0] == np.shape(images)[0], "WE NEED TO FIX THIS"
+            images[:self.tot_num_frame_each_iter] = DS.obs[:-1]
             #
             # c = camera_positions[0:3]
             #
