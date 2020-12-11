@@ -110,7 +110,6 @@ class InputImagesGenerator(ABC, Dataset):
 
         canvas, random_center = self._transpose(image, image_name, class_name, idx)
         more = {'center': random_center, 'size': new_size, 'rotation': rotate}
-        # canvas, class_name, more = self._get_my_item(idx, class_name)
         # get my item must return a PIL image
         canvas, class_name, more = self._finalize_get_item(canvas, class_name, more, idx)
 
