@@ -31,7 +31,7 @@ class FolderGenMetaLearning(FolderGen):
     def call_compute_stat(self, filename):
         return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
                                                  data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=1),
-                                                 max_iteration=self.max_iteration_mean_std, verbose=self.verbose)
+                                                 max_iteration=self.num_image_calculate_mean_std, verbose=self.verbose)
 
     def _get_label(self, idx):
         return idx[0]

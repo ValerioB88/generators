@@ -10,9 +10,9 @@ import numpy as np
 
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_canvas=(224, 224), max_iteration_mean_std=50, verbose=True):
+    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_canvas=(224, 224), num_image_calculate_mean_std=50, verbose=True):
         self.verbose = verbose
-        self.max_iteration_mean_std = max_iteration_mean_std
+        self.num_image_calculate_mean_std = num_image_calculate_mean_std
         self.transform = None
         self.name_generator = name_generator
         self.stats = {}
@@ -35,7 +35,7 @@ class InputImagesGenerator(ABC, Dataset):
         self.save_stats()
 
     def call_compute_stat(self, filename):
-        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), max_iteration=self.max_iteration_mean_std, verbose=self.verbose)
+        return compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename), max_iteration=self.num_image_calculate_mean_std, verbose=self.verbose)
 
     def save_stats(self):
         """
