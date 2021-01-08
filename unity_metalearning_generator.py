@@ -17,11 +17,12 @@ from enum import Enum
 from experiments.novel_objects_recognition.SequenceMetaLearning.unity_channels import StringDebugLogChannel, StringLogChannel, StringEnvParamsChannel
 from copy import deepcopy
 import matplotlib.pyplot as plt
+from abc import ABC, abstractmethod
 
 class UnityGenMetaLearning(InputImagesGenerator):
     def __init__(self, name_dataset_unity, unity_env_params=None, sampler=None, **kwargs):
         self.sampler = sampler(dataset=self, unity_env_params=unity_env_params, name_dataset_unity=name_dataset_unity, grayscale=kwargs['grayscale'])
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, convert_to_grayscale=False)
         super()._finalize_init()
         # atexit.register(self.sampler.env.close())
 
@@ -75,27 +76,30 @@ class UnityGenMetaLearning(InputImagesGenerator):
     def __len__(self):
         return len(self.sampler)
 
-class TaskType(Enum):
-    TRAIN = 0
-    TEST_SAME_AXIS = 1
-    TEST_ORTHOGONAL = 2
+class TrialType(Enum):
+    RND_TRIAL = 0
+    DET_TRIAL_EDELMAN_SAME_AXIS_HOR = 1
+    DET_TRIAL_EDELMAN_ORTHO_HOR = 2
+    DET_TRIAL_EDELMAN_SAME_AXIS_VER = 3
+    DET_TRIAL_EDELMAN_ORTHO_VER = 4
+    DET_TRIAL_STATIC = 5
 
+class TrainComparisonType(Enum):
+    ALL = 0
+    GROUP = 1
 
-class UnitySamplerSequenceLearning(Sampler):
+class UnitySamplerSequenceLearning(ABC, Sampler):
     """
     This sampler takes the samples from the UniyScene
     """
     warning_done = False
-
-    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale, episodes_per_epoch=999999, channel=0, test_mode: TaskType = TaskType.TRAIN):
-
+    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale, episodes_per_epoch=999999, channel=0):
         self.episodes_per_epoch = episodes_per_epoch
         self.dataset = dataset  # may be useful later on
-        self.task_type = test_mode  # None, or TestType
         self.k = k
 
-        if self.task_type != TaskType.TRAIN and self.k != 1:
-            print(f"TestMode only supported for k=1. K was = {self.k}, it will be changed to 1")
+        if self.trial_type != TrialType.RND_TRIAL and self.k != 1:
+            print(f"Deterministic Mode only supported for k=1. K was = {self.k}, it will be changed to 1")
             self.k = 1
         self.nSc = nSc
         self.nSt = nSt
@@ -125,16 +129,18 @@ class UnitySamplerSequenceLearning(Sampler):
             try:
                 env_params_channel = StringEnvParamsChannel("621f0a70-4f87-11ea-a6bf-784f4387d1f7")
                 debug_channel = StringDebugLogChannel("8e8d2cbd-ea04-444d-9180-56ed79a2b94e")
-                print(f"*** Trying to open Unity scene with dataset: {name_dataset_unity}")
+                print(f"\n*** Trying to open Unity scene with dataset: {name_dataset_unity}")
                 self.env = UnityEnvironment(file_name=self.scene, side_channels=[self.observation_channel, env_params_channel, debug_channel], no_graphics=False, worker_id=channel, additional_args=['-name_dataset', name_dataset_unity])
                 break
             except UnityWorkerInUseException as e:
                 channel += 1
 
         self.env_params = unity_env_params(self.observation_channel)
-        self.observation_channel.set_float_parameter("taskType", float(self.task_type.value))
-        self.observation_channel.set_float_parameter("grayscale", float(0))
+        self.observation_channel.set_float_parameter("trialType", float(self.trial_type.value))
+        # this is set as default, it may be changed in "send additional exp info" next.
+        self.observation_channel.set_float_parameter("trainComparisonType", float(TrainComparisonType.ALL.value))
 
+        self.send_additional_experiment_info()
         self.env.reset()
         self.observation_channel.set_float_parameter("newLevel", float(0))
 
@@ -143,11 +149,6 @@ class UnitySamplerSequenceLearning(Sampler):
         self.labels = None
         self.camera_positions = None
         self.matrix_values = []
-
-        # _, self.ax = framework_utils.create_sphere()
-        if self.task_type != TaskType.TRAIN:
-            self.ranges = []
-            self.organize_test_values()
 
         self.tot_num_frames_each_iter = self.k * (self.nSt * self.nFt + self.nSc * self.nFc)
         self.tot_num_matching = self.k
@@ -158,40 +159,19 @@ class UnitySamplerSequenceLearning(Sampler):
         self.dummy_labels = np.empty(self.tot_num_frames_each_iter)
         self.images = []
 
-    def organize_test_values(self):
-        self.range = []
-
-        if self.task_type == TaskType.TEST_SAME_AXIS or self.task_type == TaskType.TEST_ORTHOGONAL:
-            self.ranges = self.ranges = np.arange(0, 360 - 5, 10)
-            # np.hstack((np.arange(0, 270, 30),  np.arange(270, 360 - 5, 10)))
-
-
-        obj1, obj2, deg, rot = np.meshgrid(np.arange(self.num_objects), np.arange(self.num_objects), self.ranges, np.arange(0, 360, 45))
-        # obj1, obj2, deg, rot = np.meshgrid(np.arange(2), np.arange(2), self.ranges, np.arange(0, 360, 90))
-
-        self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten()))
-        # np.random.shuffle(self.matrix_values.T)
-        self.num_test = 100000
-        chosen_trials = np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False)
-        self.matrix_values = self.matrix_values[:, chosen_trials]
-        self.episodes_per_epoch = self.matrix_values.shape[1]
-        print(f"Testing [{self.episodes_per_epoch}] values")
-
-
     def __len__(self):
         return self.episodes_per_epoch
 
-    def send_test_info(self, i):
-        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
-        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
-        self.observation_channel.set_float_parameter("degree", float(self.matrix_values[2, i]))
-        self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[3, i]))
+    def send_additional_experiment_info(self):
+        pass
+
+    def send_episode_info(self, idx):
+        pass
 
     def __iter__(self):
         # vh1, vh2, vh3 = [], [], []
         for idx in range(self.episodes_per_epoch):
-            if self.task_type != TaskType.TRAIN:
-                self.send_test_info(idx)
+            self.send_episode_info(idx)
             # remember that the images are passed in alphabetical order (which is C0, C1, T0, T1 ..), whereas the camera positions are passed in a more convenient format:
             # organizes in number of matching (k), and inside that all the Cs, then all the Ts
             # labels is a list of size k with [[C, T] *k]
@@ -209,7 +189,7 @@ class UnitySamplerSequenceLearning(Sampler):
 
 #################################~~~~~~DEBUG~~~~~~###############################################
             # _, self.ax = framework_utils.create_sphere()
-            #
+            # vh1, vh2 = [], []
             # import matplotlib.pyplot as plt
             # plt.show()
             # import copy
@@ -226,7 +206,7 @@ class UnitySamplerSequenceLearning(Sampler):
             #     for i in range(len(camera_positions[0]) - 1):
             #         vh2.append(framework_utils.add_norm_vector(unity2python(c[i + 1]), 'r', ax=self.ax))
             #         vh1.append(framework_utils.add_norm_vector(unity2python(c[0]), 'k', ax=self.ax))
-                    #
+
                     ## ali = framework_utils.align_vectors(c, t)
                     ## vh3 = framework_utils.add_norm_vector(ali, 'r', ax=self.ax )
 #################################################################################################
@@ -236,14 +216,116 @@ class UnitySamplerSequenceLearning(Sampler):
             batch = self.images[:]
             yield batch
 
-# # ##
-# #
-# vh1.remove()
-# vh2.remove()
-# # vh3.remove()
 
-#batch # # ##
-#
+class UnitySamplerSequenceLearningRandom(UnitySamplerSequenceLearning):
+    def __init__(self, group_classes: TrainComparisonType = TrainComparisonType.ALL, **kwargs):
+        self.trial_type = TrialType.RND_TRIAL
+        self.group_classes = group_classes
+        super().__init__(**kwargs)
 
-##
+    def send_episode_info(self, idx):
+        pass
+
+    def send_additional_experiment_info(self):
+        self.observation_channel.set_float_parameter("trainComparisonType",  float(self.group_classes.value))
+
+
+class UnitySamplerSequenceLearningFixed(UnitySamplerSequenceLearning):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        assert self.trial_type != TrialType.RND_TRIAL
+        self.ranges = []
+        self.organize_test_values()
+
+    def organize_test_values(self):
+        raise NotImplemented
+
+
+class UnitySamplerSequenceLearningEdelmanFixed(UnitySamplerSequenceLearningFixed):
+    def __init__(self, trial_type, **kwargs):
+        self.trial_type = trial_type
+        assert (self.trial_type == TrialType.DET_TRIAL_EDELMAN_ORTHO_HOR or
+                self.trial_type == TrialType.DET_TRIAL_EDELMAN_ORTHO_VER or
+                self.trial_type == TrialType.DET_TRIAL_EDELMAN_SAME_AXIS_HOR or
+                self.trial_type == TrialType.DET_TRIAL_EDELMAN_SAME_AXIS_VER)
+        super().__init__(**kwargs)
+
+    def organize_test_values(self):
+        obj1, obj2, deg, rot = np.meshgrid(np.arange(self.num_objects), np.arange(self.num_objects),  np.arange(0, 360 - 5, 10), np.arange(0, 360, 45))
+
+        self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten()))
+        self.num_test = 50000  # this can be overwritten by the overall "-num_testing_iteration"
+        chosen_trials = np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False)
+        self.matrix_values = self.matrix_values[:, chosen_trials]
+        self.episodes_per_epoch = self.matrix_values.shape[1]
+        print(f"Testing [{self.episodes_per_epoch}] values")
+
+    def send_episode_info(self, i):
+        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
+        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
+        self.observation_channel.set_float_parameter("degree", float(self.matrix_values[2, i]))
+        self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[3, i]))  # of all the cameras around the object
+
+
+class UnitySamplerStaticFixed(UnitySamplerSequenceLearningFixed):
+    # Implement this when nSc, nSt, nFc, nFt = 1
+    def __init__(self, **kwargs):
+        self.trial_type = TrialType.DET_TRIAL_STATIC
+        super().__init__(**kwargs)
+        assert self.nSc == 1 and self.nSt == 1 and self.nFt == 1 and self.nFc == 1
+
+    def send_episode_info(self, i):
+        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
+        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
+        self.observation_channel.set_float_parameter("azimuthT", float(self.matrix_values[2, i]))
+        self.observation_channel.set_float_parameter("azimuthC", float(self.matrix_values[3, i]))
+        self.observation_channel.set_float_parameter("inclinationT", float(self.matrix_values[4, i]))
+        self.observation_channel.set_float_parameter("inclinationC", float(self.matrix_values[5, i]))
+
+
+class UnitySamplerStaticFixedGoker(UnitySamplerStaticFixed):
+    def organize_test_values(self):
+        ## All comparisons in groups: base group with all variants (A-> B C D E; F -> G H I J ..)
+        objs = np.vstack([np.vstack((np.repeat(i*9, 8), np.arange(i*9 + 1, i*9 + 9))).T for i in np.arange(10)])
+
+        ## add all comparison of different base objects
+        x = np.meshgrid(np.arange(0, 9 * 9 + 9, 9), np.arange(0, 9 * 9 + 9, 9))
+        objs = np.vstack((objs, np.vstack((x[0].flatten(), x[1].flatten())).T))
+
+        objsStr, aziT, aziC, inclT, inclC = np.meshgrid([str(i) for i in objs], np.arange(0, 360, 45), np.arange(0, 360, 45), 45, 45, indexing='ij')
+        objs = np.array([[int(i) for i in a[1:-1].split(" ") if i.isdigit()] for a in objsStr.flatten()]).T
+
+        self.matrix_values = np.vstack((*objs, aziT.flatten(), aziC.flatten(), inclT.flatten(), inclC.flatten()))
+        self.num_test = 100000  # this can be overwritten by the overall "-num_testing_iteration"
+        # sort at the beginning will make it unshuffled
+        chosen_trials = np.sort(np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False))
+        self.matrix_values = self.matrix_values[:, chosen_trials]
+        self.episodes_per_epoch = self.matrix_values.shape[1]
+        print(f"Testing [{self.episodes_per_epoch}] values")
+
+
+
+class UnitySamplerStaticFixedLeek(UnitySamplerStaticFixed):
+    def organize_test_values(self):
+
+        aziTC = np.arange(0, 360, 45)
+        inclTC = np.arange(45, 135+45, 45)
+        azi, incl = np.meshgrid(aziTC, inclTC)
+        pos = np.vstack((azi.flatten(), incl.flatten())).T
+
+        ## add all comparison of different base objects
+        objT, objC, tmp = np.meshgrid(range(self.num_objects), range(self.num_objects), [str(i) for i in pos], indexing='ij')
+        posTmp = np.array([[int(i) for i in a[1:-1].split(" ") if i.isdigit()] for a in tmp.flatten()]).T
+
+
+        self.matrix_values = np.vstack((objT.flatten(), objC.flatten(), posTmp[0], posTmp[0],  posTmp[1], posTmp[1]))
+        self.num_test = 100000
+        # sort at the beginning will make it unshuffled
+        chosen_trials = np.sort(np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False))
+        self.matrix_values = self.matrix_values[:, chosen_trials]
+        self.episodes_per_epoch = self.matrix_values.shape[1]
+        print(f"Testing [{self.episodes_per_epoch}] values")
+
+
+
 

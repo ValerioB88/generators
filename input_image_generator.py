@@ -7,17 +7,21 @@ import pathlib
 import os
 import numpy as np
 
-
+# import time
+# a = time.time()
+# for i in range(10000):
+#     transforms.Grayscale(x)
+# print(time.time() - a)
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_canvas=(224, 224), num_image_calculate_mean_std=50, verbose=True):
+    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, convert_to_grayscale=None, size_canvas=(224, 224), num_image_calculate_mean_std=50, verbose=True):
+        self.convert_to_grayscale = convert_to_grayscale
         self.verbose = verbose
         self.num_image_calculate_mean_std = num_image_calculate_mean_std
         self.transform = None
         self.name_generator = name_generator
         self.stats = {}
         self.grayscale = grayscale
-
         self.size_canvas = size_canvas  # x and y
         self.background_color_type = background_color_type
         self.num_classes = self._define_num_classes_()
@@ -25,6 +29,9 @@ class InputImagesGenerator(ABC, Dataset):
             assert False, 'Dataset has no classes!'
         if not hasattr(self, 'name_classes'):
             self.name_classes = [str(i) for i in range(self.num_classes)]
+
+        if self.convert_to_grayscale is None:
+            self.convert_to_grayscale = self.grayscale
 
         self.stats = None
 
@@ -55,7 +62,7 @@ class InputImagesGenerator(ABC, Dataset):
 
         normalize = transforms.Normalize(mean=mean,
                                          std=std)
-        if self.grayscale:
+        if self.convert_to_grayscale:
             self.transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor(), normalize])
         else:
             self.transform = transforms.Compose([transforms.ToTensor(), normalize])
