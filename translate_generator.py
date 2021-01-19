@@ -1,6 +1,8 @@
 from generate_datasets.generators.utils_generator import get_range_translation, TranslationType
 import numpy as np
 from generate_datasets.generators.input_image_generator import InputImagesGenerator
+from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType, get_background_color
+from framework_utils import copy_img_in_canvas
 
 class TranslateGenerator(InputImagesGenerator):
     def __init__(self, translation_type,  jitter=0, size_object=(50, 50), **kwargs):
@@ -63,6 +65,12 @@ class TranslateGenerator(InputImagesGenerator):
 
     def _get_translation(self, label, image_name=None, idx=None):
         return self._random_translation(label, image_name)
+
+    def _transpose(self, image, image_name, class_name, idx):
+        random_center = self._get_translation(class_name, image_name, idx)
+        image_in_canvas = copy_img_in_canvas(image, self.size_canvas, random_center, color_canvas=get_background_color(self.background_color_type))
+
+        return image_in_canvas, random_center
 
     def _multi_area_translation(selfclass_name, class_name, image_name=None, idx=None):
         b = np.random.choice(range(len(selfclass_name.translations_range[class_name])), p=selfclass_name.p_boxes[class_name])

@@ -9,12 +9,12 @@ from torch.utils.data import DataLoader
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
 from torch.utils.data import Sampler
-from generate_datasets.generators.folder_translation_generator import FolderGen
+from generate_datasets.generators.folder_translation_generator import FolderGenWithTranslation
 import warnings
 import PIL.Image as Image
 
 
-class FolderGenMetaLearning(FolderGen):
+class FolderGenWithTranslationMetaLearning(FolderGenWithTranslation):
     def __init__(self, folder, translation_type_training, translation_type_test, sampler, **kwargs):
         self.translation_type_test = translation_type_test
         self.sampler = sampler(dataset=self)
@@ -51,7 +51,7 @@ class FolderGenMetaLearning(FolderGen):
 class NShotTaskSampler(Sampler):
     warning_done = False
 
-    def __init__(self, dataset: FolderGen, n, k, q, num_tasks=1, episodes_per_epoch=999999, disjoint_train_and_test=True):
+    def __init__(self, dataset: FolderGenWithTranslation, n, k, q, num_tasks=1, episodes_per_epoch=999999, disjoint_train_and_test=True):
         super(NShotTaskSampler, self).__init__(dataset)
         self.episodes_per_epoch = episodes_per_epoch
         if num_tasks < 1:
@@ -97,7 +97,7 @@ class NShotTaskSampler(Sampler):
 
 def do_stuff():
     sampler = partial(NShotTaskSampler, n=2, k=5, q=1)
-    multi_folder_omniglot = FolderGenMetaLearning('./data/Omniglot/transparent_white/images_background', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
+    multi_folder_omniglot = FolderGenWithTranslationMetaLearning('./data/Omniglot/transparent_white/images_background', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
     dataloader = DataLoader(multi_folder_omniglot, batch_sampler=sampler(dataset=multi_folder_omniglot), num_workers=1)
 
     iterator = iter(dataloader)
@@ -105,7 +105,7 @@ def do_stuff():
     framework_utils.imshow_batch(img, multi_folder_omniglot.stats, title_lab=lab)
 
     sampler = partial(NShotTaskSampler, n=3, k=2, q=2)
-    multi_folder_omniglot = FolderGenMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
+    multi_folder_omniglot = FolderGenWithTranslationMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
     dataloader = DataLoader(multi_folder_omniglot, batch_sampler=sampler(dataset=multi_folder_omniglot), num_workers=1)
 
     iterator = iter(dataloader)

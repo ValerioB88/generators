@@ -14,7 +14,7 @@ import numpy as np
 # print(time.time() - a)
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, convert_to_grayscale=None, size_canvas=(224, 224), num_image_calculate_mean_std=50, verbose=True):
+    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, convert_to_grayscale=None, size_canvas=(224, 224), num_image_calculate_mean_std=50, stats=None, verbose=True):
         self.convert_to_grayscale = convert_to_grayscale
         self.verbose = verbose
         self.num_image_calculate_mean_std = num_image_calculate_mean_std
@@ -33,7 +33,7 @@ class InputImagesGenerator(ABC, Dataset):
         if self.convert_to_grayscale is None:
             self.convert_to_grayscale = self.grayscale
 
-        self.stats = None
+        self.stats = stats
 
     def _finalize_init(self):
         self.map_name_to_num = {i: idx for idx, i in enumerate(self.name_classes)}
@@ -50,7 +50,10 @@ class InputImagesGenerator(ABC, Dataset):
         """
         pathlib.Path('./data/generators/').mkdir(parents=True, exist_ok=True)
         filename = 'none'
-        self.stats = self.call_compute_stat(filename)
+        if self.stats is None:
+            self.stats = self.call_compute_stat(filename)
+        else:
+            print("Stats passed as an argument - they won't be computed")
         # else:
         #     self.stats = cloudpickle.load(open('./data/generators/stats_{}'.format(filename), 'rb'))
         if self.grayscale:
@@ -92,9 +95,9 @@ class InputImagesGenerator(ABC, Dataset):
         pass
 
     def _resize(self, image):
-        if self.size_object is not None:
-            image = image.resize(self.size_object)
-        return image, (self.size_object if self.size_object is not None else -1)
+        if self.size_canvas is not None:
+            image = image.resize(self.size_canvas)
+        return image, (self.size_canvas if self.size_canvas is not None else -1)
 
     def _rotate(self, image):
         return image, 0
@@ -102,13 +105,14 @@ class InputImagesGenerator(ABC, Dataset):
     def _transpose(self, image, image_name, class_name, idx):
         return image, (-1, -1)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, class_name=None):
         """
         @param idx: this is only used with 'Fixed' generators. Otherwise it doesn't mean anything to use an index for an infinite generator.
         @return:
         """
         self._prepare_get_item()
-        class_name = self._get_label(idx)
+        if class_name is None:
+            class_name = self._get_label(idx)
 
         # _get_image returns a PIL image
         image, image_name = self._get_image(idx, class_name)

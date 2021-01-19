@@ -12,7 +12,7 @@ import cv2
 from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixation
 from torchvision.transforms import Normalize
 from generate_datasets.generators.translate_generator import TranslateGenerator
-from generate_datasets.generators.folder_translation_generator import FolderGen
+from generate_datasets.generators.folder_translation_generator import FolderGenWithTranslation
 
 def add_salt_pepper_fixation(base_class, type_noise='pepper1', strength=0.5):
     class AddSaltPepperNoiseFixation(base_class):
@@ -199,7 +199,7 @@ def do_stuff():
 
     extended_class =  random_resize_extension(low_val=0.5, high_val=1.5,
                                               base_class=random_rotate_extension(from_d=-10, to_d=90,
-                                              base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)))
+                                                                                 base_class=finite_extension(FolderGenWithTranslation, grid_step_size=50, num_repetitions=2)))
     mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50), max_iteration_mean_std=10)
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
@@ -210,7 +210,7 @@ def do_stuff():
 ##
     extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
                                              base_class=foveate_extension(blurring_coeff=1.5,
-                                             base_class=finite_extension(FolderGen, grid_step_size=50, num_repetitions=2))
+                                                                          base_class=finite_extension(FolderGenWithTranslation, grid_step_size=50, num_repetitions=2))
     )
 
     mnist_dataset = extended_class(folder='./data/LeekImages/transparent', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50), max_iteration_mean_std=10)
@@ -221,14 +221,14 @@ def do_stuff():
         framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
 
 ##
-    extended_class = finite_extension(FolderGen, grid_step_size=50, num_repetitions=2)
+    extended_class = finite_extension(FolderGenWithTranslation, grid_step_size=50, num_repetitions=2)
     mnist_dataset = extended_class(folder='./data/LeekImages/transparenc', translation_type=TranslationType.WHOLE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(mnist_dataset, batch_size=16, shuffle=False, num_workers=0)
 
     extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
                                              base_class=foveate_extension(blurring_coeff=1.5,
                                                                           base_class=finite_extension(grid_step_size=50, num_repetitions=1,
-                                                                                                      base_class=FolderGen)))
+                                                                                                      base_class=FolderGenWithTranslation)))
 
     mnist_dataset = extended_class(folder='./data/MNIST/png/training', translation_type=TranslationType.HLINE, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, size_object=(50, 50))
 

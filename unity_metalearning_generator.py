@@ -6,6 +6,7 @@ from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mea
 from torch.utils.data import DataLoader
 from torch.utils.data import Sampler
 import warnings
+import torch
 import PIL.Image as Image
 from generate_datasets.generators.input_image_generator import InputImagesGenerator
 from typing import Tuple
@@ -23,26 +24,18 @@ class UnityGenMetaLearning(InputImagesGenerator):
     def __init__(self, name_dataset_unity, unity_env_params=None, sampler=None, **kwargs):
         self.sampler = sampler(dataset=self, unity_env_params=unity_env_params, name_dataset_unity=name_dataset_unity, grayscale=kwargs['grayscale'])
         super().__init__(**kwargs, convert_to_grayscale=False)
-        super()._finalize_init()
-        # atexit.register(self.sampler.env.close())
-
-    def _finalize_init(self):
-        if self.num_classes < self.sampler.k:
-            warnings.warn(f'FolderGen: Number of classes in the folder < k. K will be changed to {self.num_classes}')
-            self.sampler.k = self.num_classes
-
-        super()._finalize_init()
+        self._finalize_init()
 
     def call_compute_stat(self, filename):
-        if self.sampler.matrix_values != []:
+        if self.sampler.matrix_values is not None:
             m_copy = deepcopy(self.sampler.matrix_values)
-            np.random.shuffle(self.sampler.matrix_values.T)
+            np.random.shuffle(self.sampler.matrix_values)
 
         stats = compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
                                                   data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=0),
                                                   grayscale=self.grayscale,
                                                   max_iteration=self.num_image_calculate_mean_std, verbose=self.verbose)
-        if self.sampler.matrix_values != []:
+        if self.sampler.matrix_values is not None:
             self.sampler.matrix_values = m_copy
         return stats
 
@@ -63,7 +56,12 @@ class UnityGenMetaLearning(InputImagesGenerator):
         @param idx: this is only used with 'Fixed' generators. Otherwise it doesn't mean anything to use an index for an infinite generator.
         @return:
         """
-        image, image_name = self._get_image(idx, None)
+        if self.sampler.nSc == 0:
+            img, lb = idx
+        else:
+            img = idx
+            lb = -1
+        image, image_name = self._get_image(img, None)
         image, new_size = self._resize(image)
 
         if self.transform is not None:
@@ -71,7 +69,7 @@ class UnityGenMetaLearning(InputImagesGenerator):
         else:
             canvas = np.array(image)
 
-        return canvas, 1, 1 #, self.map_name_to_num[class_name], more
+        return canvas, lb, 1 #, self.map_name_to_num[class_name], more
 
     def __len__(self):
         return len(self.sampler)
@@ -84,20 +82,24 @@ class TrialType(Enum):
     DET_TRIAL_EDELMAN_ORTHO_VER = 4
     DET_TRIAL_STATIC = 5
 
+
+# This establish the way the comaprisons are setup. With ALL any comparison is accepted. With Group only comaprisons with objects from the same category.
+# This won't affect the way the labels are returned.
 class TrainComparisonType(Enum):
     ALL = 0
     GROUP = 1
+
 
 class UnitySamplerSequenceLearning(ABC, Sampler):
     """
     This sampler takes the samples from the UniyScene
     """
     warning_done = False
-    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale, episodes_per_epoch=999999, channel=0):
+    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale, change_lights=False, episodes_per_epoch=999999, channel=0):
         self.episodes_per_epoch = episodes_per_epoch
         self.dataset = dataset  # may be useful later on
         self.k = k
-
+        self.change_lights = change_lights
         if self.trial_type != TrialType.RND_TRIAL and self.k != 1:
             print(f"Deterministic Mode only supported for k=1. K was = {self.k}, it will be changed to 1")
             self.k = 1
@@ -106,6 +108,7 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
         self.nFc = nFc
         self.grayscale = grayscale
         self.nFt = nFt
+        self.matrix_values = None
         if name_dataset_unity is None:
             self.scene = None
             channel = 0
@@ -118,6 +121,7 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
                 ext = 'x86_64'
             self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/SequenceLearning/'
             self.scene_folder = f'k{self.k}_nSt{self.nSt}_nSc{self.nSc}_nFt{self.nFt}_nFc{self.nFc}_sc{size_canvas[0]}_g{int(self.grayscale)}'
+            print(f"Opening scene: {self.scene_folder}")
             self.scene = f'{self.scene_path}/{self.scene_folder}/scene.{ext}'
             if not os.path.exists(self.scene):
                 assert False, f"Unity scene {self.scene} generator does not exist, create it in windows!"
@@ -139,6 +143,7 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
         self.observation_channel.set_float_parameter("trialType", float(self.trial_type.value))
         # this is set as default, it may be changed in "send additional exp info" next.
         self.observation_channel.set_float_parameter("trainComparisonType", float(TrainComparisonType.ALL.value))
+        self.observation_channel.set_float_parameter("changeLights", float(self.change_lights))
 
         self.send_additional_experiment_info()
         self.env.reset()
@@ -148,11 +153,10 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
         self.num_objects = env_params_channel.num_objects
         self.labels = None
         self.camera_positions = None
-        self.matrix_values = []
 
         self.tot_num_frames_each_iter = self.k * (self.nSt * self.nFt + self.nSc * self.nFc)
         self.tot_num_matching = self.k
-        self.num_labels_passed_by_unity = self.k * 2
+        self.num_labels_passed_by_unity = self.k * (2 if self.nSc > 0 else 1)
         self.tot_num_frames_each_comparison = int(self.tot_num_frames_each_iter / self.tot_num_matching)
 
         self.max_length_elements = np.max((self.tot_num_matching, self.tot_num_frames_each_iter))
@@ -182,8 +186,10 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
 
             # when agent receives an action, it setups a new batch
             self.env.set_actions(self.behaviour_names[0], np.array([[1]]))  # just give a random thing as an action, it doesn't matter here
-
-            labels = DS.obs[-1][0][:self.num_labels_passed_by_unity].astype(int).reshape((-1, 2))
+            if self.nSc > 0:
+                labels = DS.obs[-1][0][:self.num_labels_passed_by_unity].astype(int).reshape((-1, 2))
+            else:
+                labels = torch.tensor(DS.obs[-1][0][:self.num_labels_passed_by_unity]).type(torch.LongTensor)
             camera_positions = DS.obs[-1][0][self.num_labels_passed_by_unity:].reshape((self.tot_num_matching, self.tot_num_frames_each_comparison, 3))
             self.images = [i[0] for i in DS.obs[:-1]]   # .reshape((self.tot_num_frames_each_iter, self.tot_num_frames_each_comparison, 64, 64, 3))
 
@@ -214,13 +220,17 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
             self.labels = labels
             self.camera_positions = camera_positions
             batch = self.images[:]
-            yield batch
+            self.post_process_labels()
+            yield [[b, l] for b, l in zip(batch, labels)] if self.nSc == 0 else batch
 
+    def post_process_labels(self):
+        pass
 
 class UnitySamplerSequenceLearningRandom(UnitySamplerSequenceLearning):
     def __init__(self, group_classes: TrainComparisonType = TrainComparisonType.ALL, **kwargs):
         self.trial_type = TrialType.RND_TRIAL
         self.group_classes = group_classes
+        self.matrix_values = None
         super().__init__(**kwargs)
 
     def send_episode_info(self, idx):
@@ -238,7 +248,7 @@ class UnitySamplerSequenceLearningFixed(UnitySamplerSequenceLearning):
         self.organize_test_values()
 
     def organize_test_values(self):
-        raise NotImplemented
+        pass
 
 
 class UnitySamplerSequenceLearningEdelmanFixed(UnitySamplerSequenceLearningFixed):
@@ -253,18 +263,18 @@ class UnitySamplerSequenceLearningEdelmanFixed(UnitySamplerSequenceLearningFixed
     def organize_test_values(self):
         obj1, obj2, deg, rot = np.meshgrid(np.arange(self.num_objects), np.arange(self.num_objects),  np.arange(0, 360 - 5, 10), np.arange(0, 360, 45))
 
-        self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten()))
+        self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten())).T
         self.num_test = 50000  # this can be overwritten by the overall "-num_testing_iteration"
-        chosen_trials = np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False)
-        self.matrix_values = self.matrix_values[:, chosen_trials]
-        self.episodes_per_epoch = self.matrix_values.shape[1]
+        chosen_trials = np.random.choice(range(len(self.matrix_values)), np.min((self.num_test, len(self.matrix_values))), replace=False)
+        self.matrix_values = self.matrix_values[chosen_trials, :]
+        self.episodes_per_epoch = len(self.matrix_values)
         print(f"Testing [{self.episodes_per_epoch}] values")
 
     def send_episode_info(self, i):
-        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
-        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
-        self.observation_channel.set_float_parameter("degree", float(self.matrix_values[2, i]))
-        self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[3, i]))  # of all the cameras around the object
+        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[i][0]))
+        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[i][1]))
+        self.observation_channel.set_float_parameter("degree", float(self.matrix_values[i][2]))
+        self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[i][3]))  # of all the cameras around the object
 
 
 class UnitySamplerStaticFixed(UnitySamplerSequenceLearningFixed):
@@ -274,14 +284,15 @@ class UnitySamplerStaticFixed(UnitySamplerSequenceLearningFixed):
         super().__init__(**kwargs)
         assert self.nSc == 1 and self.nSt == 1 and self.nFt == 1 and self.nFc == 1
 
-    def send_episode_info(self, i):
-        self.observation_channel.set_float_parameter("objT", float(self.matrix_values[0, i]))
-        self.observation_channel.set_float_parameter("objC", float(self.matrix_values[1, i]))
-        self.observation_channel.set_float_parameter("azimuthT", float(self.matrix_values[2, i]))
-        self.observation_channel.set_float_parameter("azimuthC", float(self.matrix_values[3, i]))
-        self.observation_channel.set_float_parameter("inclinationT", float(self.matrix_values[4, i]))
-        self.observation_channel.set_float_parameter("inclinationC", float(self.matrix_values[5, i]))
 
+    def send_episode_info(self, i):
+        if self.matrix_values is not None:
+            self.observation_channel.set_float_parameter("objC", float(self.matrix_values[i][0]))
+            self.observation_channel.set_float_parameter("objT", float(self.matrix_values[i][1]))
+            self.observation_channel.set_float_parameter("azimuthC", float(self.matrix_values[i][2]))
+            self.observation_channel.set_float_parameter("azimuthT", float(self.matrix_values[i][3]))
+            self.observation_channel.set_float_parameter("inclinationC", float(self.matrix_values[i][4]))
+            self.observation_channel.set_float_parameter("inclinationT", float(self.matrix_values[i][5]))
 
 class UnitySamplerStaticFixedGoker(UnitySamplerStaticFixed):
     def organize_test_values(self):
@@ -295,12 +306,12 @@ class UnitySamplerStaticFixedGoker(UnitySamplerStaticFixed):
         objsStr, aziT, aziC, inclT, inclC = np.meshgrid([str(i) for i in objs], np.arange(0, 360, 45), np.arange(0, 360, 45), 45, 45, indexing='ij')
         objs = np.array([[int(i) for i in a[1:-1].split(" ") if i.isdigit()] for a in objsStr.flatten()]).T
 
-        self.matrix_values = np.vstack((*objs, aziT.flatten(), aziC.flatten(), inclT.flatten(), inclC.flatten()))
+        self.matrix_values = np.vstack((*objs, aziT.flatten(), aziC.flatten(), inclT.flatten(), inclC.flatten())).T
         self.num_test = 100000  # this can be overwritten by the overall "-num_testing_iteration"
         # sort at the beginning will make it unshuffled
-        chosen_trials = np.sort(np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False))
-        self.matrix_values = self.matrix_values[:, chosen_trials]
-        self.episodes_per_epoch = self.matrix_values.shape[1]
+        chosen_trials = np.sort(np.random.choice(range(len(self.matrix_values)), np.min((self.num_test, len(self.matrix_values))), replace=False))
+        self.matrix_values = self.matrix_values[chosen_trials, :]
+        self.episodes_per_epoch = len(self.matrix_values)
         print(f"Testing [{self.episodes_per_epoch}] values")
 
 
@@ -318,12 +329,12 @@ class UnitySamplerStaticFixedLeek(UnitySamplerStaticFixed):
         posTmp = np.array([[int(i) for i in a[1:-1].split(" ") if i.isdigit()] for a in tmp.flatten()]).T
 
 
-        self.matrix_values = np.vstack((objT.flatten(), objC.flatten(), posTmp[0], posTmp[0],  posTmp[1], posTmp[1]))
+        self.matrix_values = np.vstack((objT.flatten(), objC.flatten(), posTmp[0], posTmp[0],  posTmp[1], posTmp[1])).T
         self.num_test = 100000
         # sort at the beginning will make it unshuffled
-        chosen_trials = np.sort(np.random.choice(range(self.matrix_values.shape[1]), np.min((self.num_test, self.matrix_values.shape[1])), replace=False))
-        self.matrix_values = self.matrix_values[:, chosen_trials]
-        self.episodes_per_epoch = self.matrix_values.shape[1]
+        chosen_trials = np.sort(np.random.choice(range(len(self.matrix_values)), np.min((self.num_test, len(self.matrix_values))), replace=False))
+        self.matrix_values = self.matrix_values[chosen_trials, :]
+        self.episodes_per_epoch = len(self.matrix_values)
         print(f"Testing [{self.episodes_per_epoch}] values")
 
 
