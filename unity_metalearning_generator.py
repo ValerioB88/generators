@@ -15,7 +15,7 @@ import os
 from mlagents_envs.environment import UnityEnvironment
 import numpy as np
 from enum import Enum
-from experiments.novel_objects_recognition.SequenceMetaLearning.unity_channels import StringDebugLogChannel, StringLogChannel, StringEnvParamsChannel
+from experiments.novel_objects_recognition.invariance_learning.unity_channels import StringDebugLogChannel, StringLogChannel, StringEnvParamsChannel
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
@@ -74,13 +74,19 @@ class UnityGenMetaLearning(InputImagesGenerator):
     def __len__(self):
         return len(self.sampler)
 
-class TrialType(Enum):
-    RND_TRIAL = 0
-    DET_TRIAL_EDELMAN_SAME_AXIS_HOR = 1
-    DET_TRIAL_EDELMAN_ORTHO_HOR = 2
-    DET_TRIAL_EDELMAN_SAME_AXIS_VER = 3
-    DET_TRIAL_EDELMAN_ORTHO_VER = 4
-    DET_TRIAL_STATIC = 5
+class PlaceCamerasMode(Enum):
+    RND = 0
+    DET_EDELMAN_SAME_AXIS_HOR = 1
+    DET_EDELMAN_ORTHO_HOR = 2
+    DET_EDELMAN_SAME_AXIS_VER = 3
+    DET_EDELMAN_ORTHO_VER = 4
+    FROM_CHANNEL = 5
+
+
+class GetLabelsMode(Enum):
+    RND = 0
+    SEQUENTIAL = 1
+    FROM_CHANNEL = 2
 
 
 # This establish the way the comaprisons are setup. With ALL any comparison is accepted. With Group only comaprisons with objects from the same category.
@@ -89,27 +95,29 @@ class TrainComparisonType(Enum):
     ALL = 0
     GROUP = 1
 
+no_batch_args = {'-use_batch_provider': 0}
+
 
 class UnitySamplerSequenceLearning(ABC, Sampler):
-    """
-    This sampler takes the samples from the UniyScene
-    """
     warning_done = False
-    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale, change_lights=False, episodes_per_epoch=999999, channel=0):
+
+    def __init__(self, dataset, name_dataset_unity, unity_env_params, nSc, nSt, nFc, nFt, k, size_canvas, grayscale,
+                 play_mode=False, change_lights=False, place_camera_mode=PlaceCamerasMode.RND, get_labels_mode=GetLabelsMode.RND, train_comparison_type=TrainComparisonType.ALL, batch_provider_args=None, episodes_per_epoch=999999, channel=0):
+        if batch_provider_args is None:
+            batch_provider_args = no_batch_args
+
+        self.place_camera_mode = place_camera_mode
+        self.get_labels_mode = get_labels_mode
         self.episodes_per_epoch = episodes_per_epoch
-        self.dataset = dataset  # may be useful later on
+        self.dataset = dataset
         self.k = k
-        self.change_lights = change_lights
-        if self.trial_type != TrialType.RND_TRIAL and self.k != 1:
-            print(f"Deterministic Mode only supported for k=1. K was = {self.k}, it will be changed to 1")
-            self.k = 1
         self.nSc = nSc
         self.nSt = nSt
         self.nFc = nFc
         self.grayscale = grayscale
         self.nFt = nFt
         self.matrix_values = None
-        if name_dataset_unity is None:
+        if play_mode:
             self.scene = None
             channel = 0
         else:
@@ -121,31 +129,35 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
                 ext = 'x86_64'
             self.scene_path = f'./Unity-ML-Agents-Computer-Vision/Builds/Builds_{machine_name}/SequenceLearning/'
             self.scene_folder = f'k{self.k}_nSt{self.nSt}_nSc{self.nSc}_nFt{self.nFt}_nFc{self.nFc}_sc{size_canvas[0]}_g{int(self.grayscale)}'
-            print(f"Opening scene: {self.scene_folder}")
             self.scene = f'{self.scene_path}/{self.scene_folder}/scene.{ext}'
             if not os.path.exists(self.scene):
-                assert False, f"Unity scene {self.scene} generator does not exist, create it in windows!"
+                assert False, f"Unity scene {self.scene} generator does not exist, create it in Windows!"
 
         log.set_log_level('INFO')
 
+        self.additional_arguments = {'-dataset': name_dataset_unity,
+                                     '-place_camera_mode': self.place_camera_mode.value,
+                                     '-get_labels_mode': self.get_labels_mode.value,
+                                     '-train_comparison_type': train_comparison_type.value,
+                                     '-change_lights': int(change_lights),
+                                     '-logFile': 'logout.txt',
+                                     '-repeat_same_batch': -1,
+                                     **batch_provider_args}
+
         self.observation_channel = EnvironmentParametersChannel()
+
         while True:
             try:
                 env_params_channel = StringEnvParamsChannel("621f0a70-4f87-11ea-a6bf-784f4387d1f7")
                 debug_channel = StringDebugLogChannel("8e8d2cbd-ea04-444d-9180-56ed79a2b94e")
-                print(f"\n*** Trying to open Unity scene with dataset: {name_dataset_unity}")
-                self.env = UnityEnvironment(file_name=self.scene, side_channels=[self.observation_channel, env_params_channel, debug_channel], no_graphics=False, worker_id=channel, additional_args=['-name_dataset', name_dataset_unity])
+                print(f"\n*** Trying to open Unity scene with dataset: {name_dataset_unity}, folder: {self.scene_folder}")
+                self.env = UnityEnvironment(file_name=self.scene, seed=batch_provider_args['-seed'], side_channels=[self.observation_channel, env_params_channel, debug_channel], no_graphics=False, worker_id=channel, additional_args=list(np.array([[k, v] for k, v in self.additional_arguments.items()]).flatten()), timeout_wait=180 if batch_provider_args['-use_batch_provider'] == 1 else 60)
                 break
             except UnityWorkerInUseException as e:
                 channel += 1
 
         self.env_params = unity_env_params(self.observation_channel)
-        self.observation_channel.set_float_parameter("trialType", float(self.trial_type.value))
-        # this is set as default, it may be changed in "send additional exp info" next.
-        self.observation_channel.set_float_parameter("trainComparisonType", float(TrainComparisonType.ALL.value))
-        self.observation_channel.set_float_parameter("changeLights", float(self.change_lights))
 
-        self.send_additional_experiment_info()
         self.env.reset()
         self.observation_channel.set_float_parameter("newLevel", float(0))
 
@@ -166,7 +178,7 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
     def __len__(self):
         return self.episodes_per_epoch
 
-    def send_additional_experiment_info(self):
+    def update_optional_arguments(self):
         pass
 
     def send_episode_info(self, idx):
@@ -226,24 +238,23 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
     def post_process_labels(self):
         pass
 
+
 class UnitySamplerSequenceLearningRandom(UnitySamplerSequenceLearning):
-    def __init__(self, group_classes: TrainComparisonType = TrainComparisonType.ALL, **kwargs):
-        self.trial_type = TrialType.RND_TRIAL
-        self.group_classes = group_classes
+    def __init__(self, train_comparison_type: TrainComparisonType = TrainComparisonType.ALL, **kwargs):
         self.matrix_values = None
-        super().__init__(**kwargs)
+        super().__init__(place_camera_mode=PlaceCamerasMode.RND, get_labels_mode=GetLabelsMode.RND, train_comparison_type=train_comparison_type, **kwargs)
 
     def send_episode_info(self, idx):
         pass
 
-    def send_additional_experiment_info(self):
-        self.observation_channel.set_float_parameter("trainComparisonType",  float(self.group_classes.value))
 
-
-class UnitySamplerSequenceLearningFixed(UnitySamplerSequenceLearning):
+class UnitySamplerSequenceLearningFromChannel(UnitySamplerSequenceLearning):
     def __init__(self, **kwargs):
+        if kwargs['k'] != 1:
+            print(f"Channel Mode only supported for k=1. K was = {self.k}, it will be changed to 1")
+            kwargs['k'] = 1
         super().__init__(**kwargs)
-        assert self.trial_type != TrialType.RND_TRIAL
+        assert self.place_camera_mode != PlaceCamerasMode.RND
         self.ranges = []
         self.organize_test_values()
 
@@ -251,18 +262,17 @@ class UnitySamplerSequenceLearningFixed(UnitySamplerSequenceLearning):
         pass
 
 
-class UnitySamplerSequenceLearningEdelmanFixed(UnitySamplerSequenceLearningFixed):
-    def __init__(self, trial_type, **kwargs):
-        self.trial_type = trial_type
-        assert (self.trial_type == TrialType.DET_TRIAL_EDELMAN_ORTHO_HOR or
-                self.trial_type == TrialType.DET_TRIAL_EDELMAN_ORTHO_VER or
-                self.trial_type == TrialType.DET_TRIAL_EDELMAN_SAME_AXIS_HOR or
-                self.trial_type == TrialType.DET_TRIAL_EDELMAN_SAME_AXIS_VER)
-        super().__init__(**kwargs)
+class UnitySamplerSequenceLearningEdelmanFromChannel(UnitySamplerSequenceLearningFromChannel):
+    def __init__(self, place_camera_mode, **kwargs):
+        place_camera_mode = place_camera_mode
+        assert (place_camera_mode == PlaceCamerasMode.DET_TRIAL_EDELMAN_ORTHO_HOR or
+                place_camera_mode == PlaceCamerasMode.DET_TRIAL_EDELMAN_ORTHO_VER or
+                place_camera_mode == PlaceCamerasMode.DET_TRIAL_EDELMAN_SAME_AXIS_HOR or
+                place_camera_mode == PlaceCamerasMode.DET_TRIAL_EDELMAN_SAME_AXIS_VER)
+        super().__init__(place_camera_mode=place_camera_mode, get_labels_mode=GetLabelsMode.RND, **kwargs)
 
     def organize_test_values(self):
         obj1, obj2, deg, rot = np.meshgrid(np.arange(self.num_objects), np.arange(self.num_objects),  np.arange(0, 360 - 5, 10), np.arange(0, 360, 45))
-
         self.matrix_values = np.vstack((obj1.flatten(), obj2.flatten(), deg.flatten(), rot.flatten())).T
         self.num_test = 50000  # this can be overwritten by the overall "-num_testing_iteration"
         chosen_trials = np.random.choice(range(len(self.matrix_values)), np.min((self.num_test, len(self.matrix_values))), replace=False)
@@ -277,13 +287,11 @@ class UnitySamplerSequenceLearningEdelmanFixed(UnitySamplerSequenceLearningFixed
         self.observation_channel.set_float_parameter("rotation", float(self.matrix_values[i][3]))  # of all the cameras around the object
 
 
-class UnitySamplerStaticFixed(UnitySamplerSequenceLearningFixed):
+class UnitySamplerStaticFromChannel(UnitySamplerSequenceLearningFromChannel):
     # Implement this when nSc, nSt, nFc, nFt = 1
     def __init__(self, **kwargs):
-        self.trial_type = TrialType.DET_TRIAL_STATIC
-        super().__init__(**kwargs)
-        assert self.nSc == 1 and self.nSt == 1 and self.nFt == 1 and self.nFc == 1
-
+        super().__init__(place_camera_mode=PlaceCamerasMode.FROM_CHANNEL, get_labels_mode=GetLabelsMode.FROM_CHANNEL, **kwargs)
+        assert self.nSc <= 1 and self.nSt <= 1 and self.nFt <= 1 and self.nFc <= 1
 
     def send_episode_info(self, i):
         if self.matrix_values is not None:
@@ -294,7 +302,8 @@ class UnitySamplerStaticFixed(UnitySamplerSequenceLearningFixed):
             self.observation_channel.set_float_parameter("inclinationC", float(self.matrix_values[i][4]))
             self.observation_channel.set_float_parameter("inclinationT", float(self.matrix_values[i][5]))
 
-class UnitySamplerStaticFixedGoker(UnitySamplerStaticFixed):
+
+class UnitySamplerStaticFromChannelGoker(UnitySamplerStaticFromChannel):
     def organize_test_values(self):
         ## All comparisons in groups: base group with all variants (A-> B C D E; F -> G H I J ..)
         objs = np.vstack([np.vstack((np.repeat(i*9, 8), np.arange(i*9 + 1, i*9 + 9))).T for i in np.arange(10)])
@@ -315,10 +324,8 @@ class UnitySamplerStaticFixedGoker(UnitySamplerStaticFixed):
         print(f"Testing [{self.episodes_per_epoch}] values")
 
 
-
-class UnitySamplerStaticFixedLeek(UnitySamplerStaticFixed):
+class UnitySamplerStaticFromChannelLeek(UnitySamplerStaticFromChannel):
     def organize_test_values(self):
-
         aziTC = np.arange(0, 360, 45)
         inclTC = np.arange(45, 135+45, 45)
         azi, incl = np.meshgrid(aziTC, inclTC)
@@ -327,7 +334,6 @@ class UnitySamplerStaticFixedLeek(UnitySamplerStaticFixed):
         ## add all comparison of different base objects
         objT, objC, tmp = np.meshgrid(range(self.num_objects), range(self.num_objects), [str(i) for i in pos], indexing='ij')
         posTmp = np.array([[int(i) for i in a[1:-1].split(" ") if i.isdigit()] for a in tmp.flatten()]).T
-
 
         self.matrix_values = np.vstack((objT.flatten(), objC.flatten(), posTmp[0], posTmp[0],  posTmp[1], posTmp[1])).T
         self.num_test = 100000

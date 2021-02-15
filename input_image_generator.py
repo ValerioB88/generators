@@ -14,7 +14,8 @@ import numpy as np
 # print(time.time() - a)
 
 class InputImagesGenerator(ABC, Dataset):
-    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, convert_to_grayscale=None, size_canvas=(224, 224), num_image_calculate_mean_std=50, stats=None, verbose=True):
+    def __init__(self, background_color_type=BackGroundColorType.BLACK, name_generator='', grayscale=False, convert_to_grayscale=None, size_canvas=(224, 224), num_image_calculate_mean_std=50, stats=None, verbose=True, additional_transform=[]):
+        self.additional_transform = additional_transform
         self.convert_to_grayscale = convert_to_grayscale
         self.verbose = verbose
         self.num_image_calculate_mean_std = num_image_calculate_mean_std
@@ -34,11 +35,12 @@ class InputImagesGenerator(ABC, Dataset):
             self.convert_to_grayscale = self.grayscale
 
         self.stats = stats
+        print(f"\n**Creating Generator {self.name_generator}**")
 
     def _finalize_init(self):
         self.map_name_to_num = {i: idx for idx, i in enumerate(self.name_classes)}
         self.map_num_to_name = {idx: i for idx, i in enumerate(self.name_classes)}
-        print(f'\nMap class_name -> labels: \n {self.map_name_to_num}') if self.verbose else None
+        print(f'Map class_name -> labels: \n {self.map_name_to_num}') if self.verbose else None
         self.save_stats()
 
     def call_compute_stat(self, filename):
@@ -66,9 +68,9 @@ class InputImagesGenerator(ABC, Dataset):
         normalize = transforms.Normalize(mean=mean,
                                          std=std)
         if self.convert_to_grayscale:
-            self.transform = transforms.Compose([transforms.Grayscale(), transforms.ToTensor(), normalize])
+            self.transform = transforms.Compose([*self.additional_transform, transforms.Grayscale(), transforms.ToTensor(), normalize])
         else:
-            self.transform = transforms.Compose([transforms.ToTensor(), normalize])
+            self.transform = transforms.Compose([*self.additional_transform, transforms.ToTensor(),  normalize])
 
     @abstractmethod
     def _define_num_classes_(self):
@@ -113,6 +115,7 @@ class InputImagesGenerator(ABC, Dataset):
         self._prepare_get_item()
         if class_name is None:
             class_name = self._get_label(idx)
+        more = 1
 
         # _get_image returns a PIL image
         image, image_name = self._get_image(idx, class_name)
@@ -120,7 +123,7 @@ class InputImagesGenerator(ABC, Dataset):
         image, rotate = self._rotate(image)
 
         canvas, random_center = self._transpose(image, image_name, class_name, idx)
-        more = {'center': random_center, 'size': new_size, 'rotation': rotate}
+        # more = {'center': random_center, 'size': new_size, 'rotation': rotate}
         # get my item must return a PIL image
         canvas, class_name, more = self._finalize_get_item(canvas, class_name, more, idx)
 
@@ -128,7 +131,6 @@ class InputImagesGenerator(ABC, Dataset):
             canvas = self.transform(canvas)
         else:
             canvas = np.array(canvas)
-
         return canvas, self.map_name_to_num[class_name], more
 
 

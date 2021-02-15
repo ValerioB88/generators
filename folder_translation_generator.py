@@ -33,7 +33,7 @@ def get_folder_generator(base_class):
                     name_class = os.path.splitext(os.path.basename(i))[0]
                     self.name_classes.append(name_class)
                     self.samples[name_class] = [os.path.basename(i)]
-            elif np.all([os.path.splitext(i)[1] == '' for i in glob.glob(self.folder + '/**')]):
+            elif np.all([os.path.isdir(i) for i in glob.glob(self.folder + '/**')]):
                 self.multi_folder = True
             else:
                 assert False, f"Either provide a folder with only images or a folder with only folders (classes)\nFolder {folder}"
