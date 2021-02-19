@@ -205,7 +205,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats, labels=lab)
 
 ##
     extended_class = random_resize_extension(low_val=0.5, high_val=1.5,
@@ -218,7 +218,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats, labels=lab)
 
 ##
     extended_class = finite_extension(FolderGenWithTranslation, grid_step_size=50, num_repetitions=2)
@@ -236,7 +236,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, mnist_dataset.stats, title_lab=lab)
+        framework_utils.imshow_batch(img, mnist_dataset.stats, labels=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         1: TranslationType.RIGHT}
@@ -247,7 +247,7 @@ def do_stuff():
 
     for i, data in enumerate(dataloader):
         img, lab, _ = data
-        framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
+        framework_utils.imshow_batch(img, leek_dataset.stats, labels=lab)
 
 
 if __name__ == '__main__':

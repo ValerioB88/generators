@@ -84,7 +84,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
     translation_list = {0: TranslationType.LEFT,
                         4: TranslationType.ONE_PIXEL,
@@ -94,14 +94,14 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
     dataset = DummyFaceRandomGenerator((10, 51), middle_empty=True, background_color_type=BackGroundColorType.BLACK, name_generator='prova', grayscale=True)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
     scrambling_list = {0: False,
                        5: True}
@@ -113,7 +113,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
     translation_list = {0: (10, 20),
                         4: (100, 20),
@@ -123,7 +123,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
     translation_list = {0: (10, 20, 11, 21),
                         4: (0, 120, 200, 201),
@@ -133,7 +133,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, dataset.stats, labels=lab)
 
 if __name__ == '__main__':
     freeze_support()

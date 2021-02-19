@@ -31,7 +31,7 @@ class UnityGenMetaLearning(InputImagesGenerator):
             m_copy = deepcopy(self.sampler.matrix_values)
             np.random.shuffle(self.sampler.matrix_values)
 
-        stats = compute_mean_and_std_from_dataset(self, './data/generators/stats_{}'.format(filename),
+        stats = compute_mean_and_std_from_dataset(self, None,
                                                   data_loader=DataLoader(self, batch_sampler=self.sampler, num_workers=0),
                                                   grayscale=self.grayscale,
                                                   max_iteration=self.num_image_calculate_mean_std, verbose=self.verbose)
@@ -69,7 +69,7 @@ class UnityGenMetaLearning(InputImagesGenerator):
         else:
             canvas = np.array(image)
 
-        return canvas, lb, 1 #, self.map_name_to_num[class_name], more
+        return canvas, lb, 1 #, self.class_to_idx[class_name], more
 
     def __len__(self):
         return len(self.sampler)
@@ -233,6 +233,7 @@ class UnitySamplerSequenceLearning(ABC, Sampler):
             self.camera_positions = camera_positions
             batch = self.images[:]
             self.post_process_labels()
+            # yield [[b, l] for b, l in zip(batch, np.hstack((self.labels[:, 0], self.labels[:, 1])))] <--- if you want to have same length labels and images.
             yield [[b, l] for b, l in zip(batch, labels)] if self.nSc == 0 else batch
 
     def post_process_labels(self):

@@ -66,28 +66,28 @@ def do_stuff():
     iterator = iter(dataloader)
     img, lab, more = next(iterator)
 
-    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=os.path.splitext(lab)[0], title_more=more['image_name'])
+    framework_utils.imshow_batch(img, leek_dataset.stats, labels=os.path.splitext(lab)[0], title_more=more['image_name'])
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', TranslationType.LEFT, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats, labels=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150), background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats, labels=lab)
 
     leek_dataset = LeekGenerator('./data/LeekImages_transparent', translation_type=(50, 150, 223, 224), background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_object=(50, 50))
     dataloader = DataLoader(leek_dataset, batch_size=16, shuffle=True, num_workers=1)
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, leek_dataset.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, leek_dataset.stats, labels=lab)
 
 if __name__ == '__main__':
     freeze_support()

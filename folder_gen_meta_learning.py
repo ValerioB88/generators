@@ -102,7 +102,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, labels=lab)
 
     sampler = partial(NShotTaskSampler, n=3, k=2, q=2)
     multi_folder_omniglot = FolderGenWithTranslationMetaLearning('./data/MNIST/png/training', translation_type_training=TranslationType.LEFTMOST, translation_type_test=TranslationType.WHOLE, sampler=sampler, background_color_type=BackGroundColorType.BLACK, name_generator='dataLeek', grayscale=False, size_canvas=(224, 224), size_object=(50, 50))
@@ -110,7 +110,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, multi_folder_omniglot.stats, labels=lab)
 
 
 if __name__ == '__main__':

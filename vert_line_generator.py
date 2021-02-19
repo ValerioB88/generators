@@ -56,7 +56,7 @@ def do_stuff():
 
     iterator = iter(dataloader)
     img, lab, _ = next(iterator)
-    framework_utils.imshow_batch(img, vert_gen.stats, title_lab=lab)
+    framework_utils.imshow_batch(img, vert_gen.stats, labels=lab)
 
 if __name__ == '__main__':
     freeze_support()
