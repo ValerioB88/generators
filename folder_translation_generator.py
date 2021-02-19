@@ -3,12 +3,12 @@ import os
 from multiprocessing.dummy import freeze_support
 from torch.utils.data import Sampler
 import torch
+from sty import fg, bg, ef, rs
 from torch.utils.data import SequentialSampler, RandomSampler
 import framework_utils
 import glob
 import PIL.Image as Image
 import copy
-from natsort import natsorted
 from torch.utils.data import DataLoader
 import numpy as np
 from generate_datasets.generators.utils_generator import TranslationType, BackGroundColorType
@@ -16,29 +16,38 @@ from generate_datasets.generators.translate_generator import TranslateGenerator,
 import pathlib
 from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
 import torchvision
-from torch.utils.data import Dataset
 import os
 from torchvision.datasets import ImageFolder
 import re
 
-class ImageFolderSelective(ImageFolder):
-    def __init__(self, name_classes=None, num_viewpoints=None, **kwargs):
+class SelectObjects(ImageFolder):
+    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, **kwargs):
         self.name_classes = name_classes
         super().__init__(**kwargs)
+        self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
+        self.selected_objects = selected_objects
         from progress.bar import Bar
-        if num_viewpoints is not None:
+        print("SELECTING OBJECTS")
+        if num_objects_per_class is not None or self.selected_objects is not None:
+            all_objs = ([np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == c]) for c in range(len(self.classes))])
+            if self.selected_objects is None:
+                self.selected_objects = np.hstack([np.random.choice(o, np.min((num_objects_per_class, len(o))), replace=False) for o in all_objs])
+            self.samples = [i for i in self.samples if get_subclass_from_sample(self.idx_to_class, i) in self.selected_objects]
+        print("SELECTING VIEWPOINTS")
+        if num_viewpoints_per_object is not None:
             get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
             selected_vp_samples = []
             index_next_object = 0
-            bar = Bar(f"Selecting {num_viewpoints} viewpoints", max=len(self.samples))
+            bar = Bar(f"Selecting {num_viewpoints_per_object} viewpoints", max=len(self.samples))
+
             while True:
                 # find next index:
                 obj_num = get_obj_num(self.samples[index_next_object][0])
                 j = index_next_object
                 while j < len(self.samples) and get_obj_num(self.samples[j][0]) == obj_num:
                     j += 1
-                itmp = np.random.choice(j-index_next_object, np.min((num_viewpoints, j-index_next_object)))[0]
-                selected_vp_samples.extend([self.samples[index_next_object:j][itmp]])
+                itmp = np.random.choice(j - index_next_object, np.min((num_viewpoints_per_object, j - index_next_object)), replace=False)
+                selected_vp_samples.extend([self.samples[index_next_object:j][i] for i in itmp])
                 bar.next(n=j-index_next_object)
                 index_next_object = j
 
@@ -46,26 +55,32 @@ class ImageFolderSelective(ImageFolder):
                     break
 
             all_objects = np.unique([get_obj_num(i[0]) for i in self.samples])
-            print(f"Num Objects: {len(all_objects)}, num tot samples: {len(self.samples)}, num selected vp samples: {len(selected_vp_samples)}")
+            print(f"\nNum Objects: {len(all_objects)}, num tot samples: {len(self.samples)}, num selected vp samples: {len(selected_vp_samples)}")
+            all_objs = {self.idx_to_class[j]: len(np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == j])) for j in range(len(self.classes))}
+            [print('{:25}: {:4}'.format(k, i)) for k, i in all_objs.items()]
             self.samples = selected_vp_samples
 
     def _find_classes(self, dir: str):
-        classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in self.name_classes if self.name_classes is not None else True)]
+        classes_to_take = re.findall(r'[a-zA-Z]+_?[a-zA-Z]+.n.\d+', self.name_classes) if self.name_classes is not None else None
+        classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in classes_to_take if self.name_classes is not None else True)]
         classes.sort()
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
 
 
-class SubclassImageFolder(ImageFolderSelective):
+class SubclassImageFolder(SelectObjects):
     def __init__(self, sampler, **kwargs):
         super().__init__(**kwargs)
         self.subclasses = {}
         self.subclass_to_idx = {}
+        self.classes_to_subclasses = {}
         self.subclasses_names = []
         self.subclasses_to_classes = {}
         subclass_idx = 0
+        self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
+
         for idx, i in enumerate(self.samples):
-            subclass_name = self.get_subclass_from_sample(i)
+            subclass_name = get_subclass_from_sample(self.idx_to_class, i)
 
             if subclass_name in self.subclasses:
                 self.subclasses[subclass_name].append(idx)
@@ -73,11 +88,18 @@ class SubclassImageFolder(ImageFolderSelective):
                 self.subclasses_names.append(subclass_name)
                 self.subclasses[subclass_name] = [idx]
                 self.subclasses_to_classes[subclass_name] = i[1]
+                if self.idx_to_class[i[1]] not in self.classes_to_subclasses:
+                    self.classes_to_subclasses[self.idx_to_class[i[1]]] = [subclass_name]
+                else:
+                    self.classes_to_subclasses[self.idx_to_class[i[1]]].append(subclass_name)
 
                 subclass_idx += 1
-
+        print('Length classes:')
+        # [print('{:20}: {:4}'.format(k, len(i))) for k, i in self.classes_to_subclasses.items()]
         self.subclass_to_idx = {k: idx for idx, k in enumerate(self.subclasses_names)}
-        self.samples_sb = [(a[0], a[1], self.subclass_to_idx[self.get_subclass_from_sample(a)]) for a in self.samples]
+        self.idx_to_subclass = {v: k for k, v in self.subclass_to_idx.items()}
+        self.samples_sb = [(a[0], a[1], self.subclass_to_idx[get_subclass_from_sample(self.idx_to_class, a)]) for a in self.samples]
+
         self.sampler = sampler(subclasses=self.subclasses, subclasses_names=self.subclasses_names, dataset=self)
         print(f"Subclasses folder dataset. Num classes: {len(self.classes)}, num subclasses: {len(self)}")  #name: {self.subclasses_names}") # nope! Too many!
 
@@ -92,12 +114,12 @@ class SubclassImageFolder(ImageFolderSelective):
 
         return sample, class_idx, object_idx
 
-    def get_subclass_from_sample(self, sample):
-        get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
-        name_class = self.idx_to_class[sample[1]]
-        return name_class + '_' + str(get_obj_num(sample[0]))
-        # name_class = self.idx_to_classes[sample[1]]
-        # return name_class + '_' + os.path.split(os.path.split(sample[0])[0])[1]
+def get_subclass_from_sample(idx_to_class, sample):
+    get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
+    name_class = idx_to_class[sample[1]]
+    return name_class + '_' + str(get_obj_num(sample[0]))
+    # name_class = self.idx_to_classes[sample[1]]
+    # return name_class + '_' + os.path.split(os.path.split(sample[0])[0])[1]
 
 from torch.utils.data.sampler import WeightedRandomSampler
 def get_weighted_sampler(dataset):
@@ -107,7 +129,7 @@ def get_weighted_sampler(dataset):
 
 
 class KBatchSampler(Sampler):
-    def __init__(self, batch_size, dataset, subclasses, subclasses_names, prob_same=0.5, rebalance_classes=True):
+    def __init__(self, batch_size, dataset, subclasses, subclasses_names, prob_same=0.5, rebalance_classes=False):
         self.dataset = dataset
         self.batch_size = batch_size
         self.subclasses = subclasses
@@ -144,14 +166,15 @@ class KBatchSampler(Sampler):
 def add_compute_stats(obj_class):
     class ComputeStatsUpdateTransform(obj_class):
         ## This class basically is used for normalize Dataset Objects such as ImageFolder in order to be used in our more general framework
-        def __init__(self, name_generator, additional_transform=None, num_image_calculate_mean_std=70, grayscale=False, **kwargs):
-            print(f"\n**Creating Dataset {name_generator}**")
+        def __init__(self, name_generator, additional_transform=None, num_image_calculate_mean_std=70, grayscale=False, stats=None, **kwargs):
+            print(fg.yellow + f"\n**Creating Dataset [" + fg.cyan + f"{name_generator}" + fg.yellow + "]**" + rs.fg)
             super().__init__(**kwargs)
+            self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
 
             if additional_transform is None:
                 additional_transform = []
             if grayscale and torchvision.transforms.Grayscale() not in additional_transform:
-                print("Warning! Compute stats is in grayscale mode but no grayscale transform is used. This may be ok with some datasets (such as unity)")
+                print(fg.red + "Warning! Compute stats is in grayscale mode but no grayscale transform is used. This may be ok with some datasets (such as unity)" + rs.fs)
             self.transform = torchvision.transforms.Compose([*additional_transform, torchvision.transforms.ToTensor()])
 
             self.name_generator = name_generator
@@ -161,7 +184,11 @@ def add_compute_stats(obj_class):
             self.num_classes = len(self.classes)
             self.name_classes = self.classes
 
-            self.stats = self.call_compute_stats()
+            if stats is None:
+                self.stats = self.call_compute_stats()
+            else:
+                print(fg.red + f"Using precomputed stats: " + fg.cyan + f"mean = {stats['mean']}, std = {stats['std']}" + rs.fg)
+                self.stats = stats
             normalize = torchvision.transforms.Normalize(mean=self.stats['mean'],
                                                          std=self.stats['std'])
             # self.stats = {}
@@ -170,7 +197,6 @@ def add_compute_stats(obj_class):
             # normalize = torchvision.transforms.Normalize(mean=[0.491, 0.482, 0.447], std=[0.247, 0.243, 0.262])
 
             self.transform.transforms += [normalize]
-            self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
 
             print(f'Map class_name -> labels: \n {self.class_to_idx}\n{len(self)} samples.')
 
@@ -187,6 +213,7 @@ def add_compute_stats(obj_class):
 
 def get_folder_generator(base_class):
     class FolderGen(base_class):
+
         """
         This generator is given a folder with images inside, and each image is treated as a different class.
         If the folder contains images, then multi_folder is set to False, each image is a class. Otherwise we traverse the folder
@@ -214,6 +241,8 @@ def get_folder_generator(base_class):
             folder_path = pathlib.Path(self.folder)
             if self.multi_folder:
                 self.samples = {}
+                from natsort import natsorted
+
                 for dirpath, dirname, filenames in natsorted(os.walk(self.folder)):
                     dir_path = pathlib.Path(dirpath)
                     if filenames != [] and '.png' in filenames[0]:

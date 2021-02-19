@@ -13,12 +13,13 @@ from typing import Tuple
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 import os
 from mlagents_envs.environment import UnityEnvironment
-import numpy as np
 from enum import Enum
 from experiments.novel_objects_recognition.invariance_learning.unity_channels import StringDebugLogChannel, StringLogChannel, StringEnvParamsChannel
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import numpy as np
 from abc import ABC, abstractmethod
+print("ciao")
 
 class UnityGenMetaLearning(InputImagesGenerator):
     def __init__(self, name_dataset_unity, unity_env_params=None, sampler=None, **kwargs):
