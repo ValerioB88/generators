@@ -19,7 +19,6 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 from abc import ABC, abstractmethod
-print("ciao")
 
 class UnityGenMetaLearning(InputImagesGenerator):
     def __init__(self, name_dataset_unity, unity_env_params=None, sampler=None, **kwargs):

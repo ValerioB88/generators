@@ -19,46 +19,76 @@ import torchvision
 import os
 from torchvision.datasets import ImageFolder
 import re
+import pickle
+from pathlib import Path
 
 class SelectObjects(ImageFolder):
-    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, **kwargs):
+    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, save_load_filename=None, **kwargs):
         self.name_classes = name_classes
+
         super().__init__(**kwargs)
-        self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
         self.selected_objects = selected_objects
-        from progress.bar import Bar
-        print("SELECTING OBJECTS")
-        if num_objects_per_class is not None or self.selected_objects is not None:
-            all_objs = ([np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == c]) for c in range(len(self.classes))])
-            if self.selected_objects is None:
-                self.selected_objects = np.hstack([np.random.choice(o, np.min((num_objects_per_class, len(o))), replace=False) for o in all_objs])
-            self.samples = [i for i in self.samples if get_subclass_from_sample(self.idx_to_class, i) in self.selected_objects]
-        print("SELECTING VIEWPOINTS")
-        if num_viewpoints_per_object is not None:
-            get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
-            selected_vp_samples = []
-            index_next_object = 0
-            bar = Bar(f"Selecting {num_viewpoints_per_object} viewpoints", max=len(self.samples))
+        get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
+        original_sample_size = len(self.samples)
+        loaded = False
+        self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
+        if save_load_filename is not None:
+            if os.path.isfile(save_load_filename):
+                print(fg.red + f"LOADING SAMPLES FROM /samples/{Path(save_load_filename).name}" + rs.fg)
+                self.samples = pickle.load(open(save_load_filename, 'rb'))
+                self.selected_objects = np.hstack([np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == c]) for c in range(len(self.classes))])
+                loaded = True
 
-            while True:
-                # find next index:
-                obj_num = get_obj_num(self.samples[index_next_object][0])
-                j = index_next_object
-                while j < len(self.samples) and get_obj_num(self.samples[j][0]) == obj_num:
-                    j += 1
-                itmp = np.random.choice(j - index_next_object, np.min((num_viewpoints_per_object, j - index_next_object)), replace=False)
-                selected_vp_samples.extend([self.samples[index_next_object:j][i] for i in itmp])
-                bar.next(n=j-index_next_object)
-                index_next_object = j
+        if not loaded:
+            from progress.bar import Bar
+            if num_objects_per_class is not None or self.selected_objects is not None:
+                print("SELECTING OBJECTS")
 
-                if j >= len(self.samples):
-                    break
+                all_objs_count = ([np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == c]) for c in range(len(self.classes))])
+                if self.selected_objects is None:
+                    self.selected_objects = np.hstack([np.random.choice(o, np.min((num_objects_per_class, len(o))), replace=False) for o in all_objs_count])
+                self.samples = [i for i in self.samples if get_subclass_from_sample(self.idx_to_class, i) in self.selected_objects]
 
-            all_objects = np.unique([get_obj_num(i[0]) for i in self.samples])
-            print(f"\nNum Objects: {len(all_objects)}, num tot samples: {len(self.samples)}, num selected vp samples: {len(selected_vp_samples)}")
-            all_objs = {self.idx_to_class[j]: len(np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == j])) for j in range(len(self.classes))}
-            [print('{:25}: {:4}'.format(k, i)) for k, i in all_objs.items()]
-            self.samples = selected_vp_samples
+            if num_viewpoints_per_object is not None:
+                print("SELECTING VIEWPOINTS")
+                selected_vp_samples = []
+                index_next_object = 0
+                bar = Bar(f"Selecting {num_viewpoints_per_object} viewpoints", max=len(self.samples))
+
+                while True:
+                    # find next index:
+                    obj_num = get_obj_num(self.samples[index_next_object][0])
+                    j = index_next_object
+                    while j < len(self.samples) and get_obj_num(self.samples[j][0]) == obj_num:
+                        j += 1
+                    itmp = np.random.choice(j - index_next_object, np.min((num_viewpoints_per_object, j - index_next_object)), replace=False)
+                    selected_vp_samples.extend([self.samples[index_next_object:j][i] for i in itmp])
+                    bar.next(n=j-index_next_object)
+                    index_next_object = j
+
+                    if j >= len(self.samples):
+                        break
+
+                self.samples = selected_vp_samples
+
+        # all_objects = np.unique([get_obj_num(i[0]) for i in self.samples])
+        print(f"\nNum Objects: {len(self.selected_objects) if self.selected_objects is not None else 'all'}, num tot samples: {original_sample_size}, num selected vp samples: {len(self.samples)}")
+        all_objs_count = {self.idx_to_class[j]: len(np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == j])) for j in range(len(self.classes))}
+        [print('{:25}: {:4}'.format(k, i)) for k, i in all_objs_count.items()]
+        tmplst = [np.min((i, len(self.samples)-1)) for i in [0, 1, 3, 5, 100, 2000, -1]]
+        print(fg.cyan + f"Samples in indexes {tmplst}:\t" + rs.fg, end="")
+        [print(rf'{i[1]}: {get_subclass_with_azi_incl(self.idx_to_class, i[0])}', end="\t") for i in [(self.samples[s], s) for s in tmplst]]
+        if self.selected_objects is not None:
+            tmplst = [np.min((i, len(self.selected_objects)-1)) for i in [0, 1, 3, 5, 100, 2000, -1]]
+            print(fg.cyan + f"\nObjects in indexes {tmplst}:\t" + rs.fg, end="")
+            [print(f'{i[1]}: {i[0]}', end="\t") for i in [(self.selected_objects[s], s) for s in tmplst]]
+
+        print()
+
+        if save_load_filename is not None and loaded is False:
+            print(fg.yellow + f"SAVING SAMPLES IN /samples/{Path(save_load_filename).name}" + rs.fg)
+            pathlib.Path(Path(save_load_filename).parent).mkdir(parents=True, exist_ok=True)
+            pickle.dump(self.samples, open(save_load_filename, 'wb'))
 
     def _find_classes(self, dir: str):
         classes_to_take = re.findall(r'[a-zA-Z]+_?[a-zA-Z]+.n.\d+', self.name_classes) if self.name_classes is not None else None
@@ -114,12 +144,19 @@ class SubclassImageFolder(SelectObjects):
 
         return sample, class_idx, object_idx
 
+
 def get_subclass_from_sample(idx_to_class, sample):
     get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
     name_class = idx_to_class[sample[1]]
     return name_class + '_' + str(get_obj_num(sample[0]))
     # name_class = self.idx_to_classes[sample[1]]
     # return name_class + '_' + os.path.split(os.path.split(sample[0])[0])[1]
+
+def get_subclass_with_azi_incl(idx_to_class, sample):
+    get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
+    name_class = idx_to_class[sample[1]]
+    incl_azi = re.search('O\d+_I(\d+)_A(\d+).png', sample[0]).groups()
+    return name_class + '_' + str(get_obj_num(sample[0])) + f'_I{incl_azi[0]}_A{incl_azi[1]}'
 
 from torch.utils.data.sampler import WeightedRandomSampler
 def get_weighted_sampler(dataset):
