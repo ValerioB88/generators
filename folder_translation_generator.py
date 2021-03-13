@@ -23,7 +23,7 @@ import pickle
 from pathlib import Path
 
 class SelectObjects(ImageFolder):
-    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, save_load_filename=None, **kwargs):
+    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, save_load_samples_filename=None, **kwargs):
         self.name_classes = name_classes
 
         super().__init__(**kwargs)
@@ -32,12 +32,16 @@ class SelectObjects(ImageFolder):
         original_sample_size = len(self.samples)
         loaded = False
         self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
-        if save_load_filename is not None:
-            if os.path.isfile(save_load_filename):
-                print(fg.red + f"LOADING SAMPLES FROM /samples/{Path(save_load_filename).name}" + rs.fg)
-                self.samples = pickle.load(open(save_load_filename, 'rb'))
+        if save_load_samples_filename is not None:
+            if os.path.isfile(save_load_samples_filename):
+                print(fg.red + f"LOADING SAMPLES FROM /samples/{Path(save_load_samples_filename).name}" + rs.fg)
+                if num_objects_per_class is not None or selected_objects is not None or num_viewpoints_per_object is not None:
+                    print("Max num objects, Num Viewpoints and specific object to select will be ignored")
+                self.samples = pickle.load(open(save_load_samples_filename, 'rb'))
                 self.selected_objects = np.hstack([np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == c]) for c in range(len(self.classes))])
                 loaded = True
+            else:
+                print(fg.yellow + f"Path {save_load_samples_filename} not found, will compute samples" + rs.fg)
 
         if not loaded:
             from progress.bar import Bar
@@ -85,13 +89,14 @@ class SelectObjects(ImageFolder):
 
         print()
 
-        if save_load_filename is not None and loaded is False:
-            print(fg.yellow + f"SAVING SAMPLES IN /samples/{Path(save_load_filename).name}" + rs.fg)
-            pathlib.Path(Path(save_load_filename).parent).mkdir(parents=True, exist_ok=True)
-            pickle.dump(self.samples, open(save_load_filename, 'wb'))
+        if save_load_samples_filename is not None and loaded is False:
+            print(fg.yellow + f"SAVING SAMPLES IN /samples/{Path(save_load_samples_filename).name}" + rs.fg)
+            pathlib.Path(Path(save_load_samples_filename).parent).mkdir(parents=True, exist_ok=True)
+            pickle.dump(self.samples, open(save_load_samples_filename, 'wb'))
 
     def _find_classes(self, dir: str):
-        classes_to_take = re.findall(r'[a-zA-Z]+_?[a-zA-Z]+.n.\d+', self.name_classes) if self.name_classes is not None else None
+        #re.findall(r'[a-zA-Z]+_?[a-zA-Z]+.n.\d+', self.name_classes) if self.name_classes is not None else None
+        classes_to_take = list(self.name_classes.keys()) if self.name_classes is not None else None
         classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in classes_to_take if self.name_classes is not None else True)]
         classes.sort()
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
@@ -160,6 +165,8 @@ def get_subclass_with_azi_incl(idx_to_class, sample):
 
 from torch.utils.data.sampler import WeightedRandomSampler
 def get_weighted_sampler(dataset):
+    print("QUI: ")
+    print(np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))]))
     weights_class = 1 / np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))])
     weights_dataset = [weights_class[dataset.subclasses_to_classes[i]] for i in dataset.subclasses_names]
     return WeightedRandomSampler(weights=weights_dataset, num_samples=len(dataset.subclasses_names), replacement=True)
@@ -203,29 +210,55 @@ class KBatchSampler(Sampler):
 def add_compute_stats(obj_class):
     class ComputeStatsUpdateTransform(obj_class):
         ## This class basically is used for normalize Dataset Objects such as ImageFolder in order to be used in our more general framework
-        def __init__(self, name_generator, additional_transform=None, num_image_calculate_mean_std=70, grayscale=False, stats=None, **kwargs):
+        def __init__(self, name_generator, additional_PIL_transforms=None, additional_tensor_transforms=None, num_image_calculate_mean_std=70, stats=None, save_stats_file=None, **kwargs):
+            """
+
+            @param additional_tensor_transforms:
+            @param stats: this can be a dict (previous stats, which will contain 'mean': [x, y, z] and 'std': [w, v, u], a path to a pickle file, or None
+            @param save_stats_file:
+            @param kwargs:
+            """
             print(fg.yellow + f"\n**Creating Dataset [" + fg.cyan + f"{name_generator}" + fg.yellow + "]**" + rs.fg)
             super().__init__(**kwargs)
             self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
 
-            if additional_transform is None:
-                additional_transform = []
-            if grayscale and torchvision.transforms.Grayscale() not in additional_transform:
-                print(fg.red + "Warning! Compute stats is in grayscale mode but no grayscale transform is used. This may be ok with some datasets (such as unity)" + rs.fs)
-            self.transform = torchvision.transforms.Compose([*additional_transform, torchvision.transforms.ToTensor()])
+            if additional_PIL_transforms is None:
+                additional_PIL_transforms = []
+            if additional_tensor_transforms is None:
+                additional_tensor_transforms = []
+
+            self.transform = torchvision.transforms.Compose([*additional_PIL_transforms, torchvision.transforms.ToTensor(), *additional_tensor_transforms])
 
             self.name_generator = name_generator
-            self.additional_transform = additional_transform
-            self.grayscale = grayscale
+            self.additional_transform = additional_PIL_transforms
             self.num_image_calculate_mean_std = num_image_calculate_mean_std
             self.num_classes = len(self.classes)
             self.name_classes = self.classes
 
-            if stats is None:
-                self.stats = self.call_compute_stats()
-            else:
-                print(fg.red + f"Using precomputed stats: " + fg.cyan + f"mean = {stats['mean']}, std = {stats['std']}" + rs.fg)
+            compute_stats = False
+
+            if isinstance(stats, dict):
                 self.stats = stats
+                print(fg.red + f"Using precomputed stats: " + fg.cyan + f"mean = {self.stats['mean']}, std = {self.stats['std']}" + rs.fg)
+
+            elif isinstance(stats, str):
+                if os.path.isfile(stats):
+                    self.stats = pickle.load(open(stats, 'rb'))
+                    print(fg.red + f"Using stats from file [{Path(stats).name}]: " + fg.cyan + f"mean = {self.stats['mean']}, std = {self.stats['std']}" + rs.fg)
+                    if stats == save_stats_file:
+                        save_stats_file = None
+                else:
+                    print(fg.red + f"File [{Path(stats).name}] not found, stats will be computed." + rs.fg)
+                    compute_stats = True
+
+            if stats is None or compute_stats is True:
+                self.stats = self.call_compute_stats()
+
+            if save_stats_file is not None:
+                print(f"Stats saved in {save_stats_file}")
+                pathlib.Path(os.path.dirname(save_stats_file)).mkdir(parents=True, exist_ok=True)
+                pickle.dump(self.stats, open(save_stats_file, 'wb'))
+
             normalize = torchvision.transforms.Normalize(mean=self.stats['mean'],
                                                          std=self.stats['std'])
             # self.stats = {}
@@ -238,7 +271,7 @@ def add_compute_stats(obj_class):
             print(f'Map class_name -> labels: \n {self.class_to_idx}\n{len(self)} samples.')
 
         def call_compute_stats(self):
-            return compute_mean_and_std_from_dataset(self, None, max_iteration=self.num_image_calculate_mean_std, grayscale=self.grayscale)
+            return compute_mean_and_std_from_dataset(self, None, max_iteration=self.num_image_calculate_mean_std)
 
         def __getitem__(self, idx, class_name=None):
             image, *rest = super().__getitem__(idx)

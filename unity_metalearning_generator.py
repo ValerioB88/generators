@@ -40,7 +40,7 @@ class UnityGenMetaLearning(InputImagesGenerator):
         return stats
 
     def _define_num_classes_(self):
-        return self.sampler.num_objects
+        return self.sampler.max_objs
 
     def _resize(self, image):
         if self.size_canvas is not None:

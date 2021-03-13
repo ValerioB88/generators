@@ -7,8 +7,6 @@ from generate_datasets.generators.utils_generator import TranslationType, BackGr
 # from generate_datasets.generators.folder_translation_generator import FolderGen
 import PIL.Image as Image
 from PIL import ImageFilter
-from external.Image_Foveation_Python.retina_transform import foveat_img
-import cv2
 from generate_datasets.generators.custom_transforms import SaltPepperNoiseFixation
 from torchvision.transforms import Normalize
 from generate_datasets.generators.translate_generator import TranslateGenerator
@@ -26,6 +24,9 @@ def add_salt_pepper_fixation(base_class, type_noise='pepper1', strength=0.5):
 
 
 def foveate_extension(base_class, blurring_coeff=0.248):
+    import cv2
+    from external.Image_Foveation_Python.retina_transform import foveat_img
+
     class ImageFoveationGeneratorMixin(base_class):
         def __init__(self, *args, **kwargs):
             self.blurring_coeff = blurring_coeff
