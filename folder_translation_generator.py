@@ -22,11 +22,77 @@ import re
 import pickle
 from pathlib import Path
 
-class SelectObjects(ImageFolder):
-    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, save_load_samples_filename=None, **kwargs):
-        self.name_classes = name_classes
 
+class MyImageFolder(ImageFolder):
+    def finalize_getitem(self, path, sample, labels, info=None):
+        if info is None:
+            info = {}
+        return sample, labels, info
+
+    def __init__(self, name_classes=None, *args, **kwargs):
+        self.name_classes = name_classes
+        super().__init__(*args, **kwargs)
+
+    def _find_classes(self, dir: str):
+        if self.name_classes is None:
+            return super()._find_classes(dir)
+        else:
+            classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in self.name_classes)]
+            classes.sort()
+            class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+        return classes, class_to_idx
+
+
+    def __getitem__(self, index):
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        output = self.finalize_getitem(path=path, sample=sample, labels=target)
+        return output
+
+
+class SubsetImageFolder(MyImageFolder):
+    def __init__(self, num_images_per_class=None, save_load_samples_filename=None, **kwargs):
         super().__init__(**kwargs)
+        loaded = False
+        if num_images_per_class:
+            if save_load_samples_filename is not None:
+                if os.path.isfile(save_load_samples_filename):
+                    print(fg.red + f"LOADING SAMPLES FROM /samples/{Path(save_load_samples_filename).name}" + rs.fg)
+                    self.samples = pickle.load(open(save_load_samples_filename, 'rb'))
+                    loaded = True
+                else:
+                    print(fg.yellow + f"Path {save_load_samples_filename} not found, will compute samples" + rs.fg)
+
+            if not loaded:
+                subset_samples = []
+                for c in range(len(self.classes)):
+                    objs_class = [i for i in self.samples if i[1] == c]
+                    subset_samples.extend([objs_class[i] for i in np.random.choice(len(objs_class), num_images_per_class, replace=False)])
+                self.samples = subset_samples
+
+            if save_load_samples_filename is not None and loaded is False:
+                print(fg.yellow + f"SAVING SAMPLES IN /samples/{Path(save_load_samples_filename).name}" + rs.fg)
+                pathlib.Path(Path(save_load_samples_filename).parent).mkdir(parents=True, exist_ok=True)
+                pickle.dump(self.samples, open(save_load_samples_filename, 'wb'))
+
+
+class SelectObjects(MyImageFolder):
+    """
+    This is used for the objects in ShapeNet
+    """
+    def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, take_specific_azi_incl=True, save_load_samples_filename=None, **kwargs):
+        self.name_classes = name_classes
+        # take_specific_azi_incl = False  take random viewpoints
+        #          a                 True  take one specific viewpoint: 75, 36
+        #                           (x, y) take one specific viewpoint: (x,y)
+        # only work if num_viewpoints_per_object is 1, otherwise changed to False.
+        if num_viewpoints_per_object == 1 and take_specific_azi_incl is True:
+            take_specific_azi_incl = (75, 36)
+        super().__init__(name_classes, **kwargs)
         self.selected_objects = selected_objects
         get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
         original_sample_size = len(self.samples)
@@ -59,14 +125,36 @@ class SelectObjects(ImageFolder):
                 index_next_object = 0
                 bar = Bar(f"Selecting {num_viewpoints_per_object} viewpoints", max=len(self.samples))
 
+                if take_specific_azi_incl and num_viewpoints_per_object > 1:
+                    print(fg.yellow + "Num_viewpoints_per_object > 1 and take_specific_azi_incl is True. Take_specific_azi_incl changed to false (random vp)" + rs.fg)
+
                 while True:
                     # find next index:
                     obj_num = get_obj_num(self.samples[index_next_object][0])
                     j = index_next_object
                     while j < len(self.samples) and get_obj_num(self.samples[j][0]) == obj_num:
                         j += 1
-                    itmp = np.random.choice(j - index_next_object, np.min((num_viewpoints_per_object, j - index_next_object)), replace=False)
-                    selected_vp_samples.extend([self.samples[index_next_object:j][i] for i in itmp])
+
+                    if num_viewpoints_per_object == 1 and take_specific_azi_incl:
+                        selected_sample = [i for i in self.samples[index_next_object:j] if re.search(rf'O\d+_I{take_specific_azi_incl[0]}_A{take_specific_azi_incl[1]}', i[0])]
+                        assert len(selected_sample) <= 1
+                        if not selected_sample:
+                            #if not found
+                            incl_azi = [re.search(rf'O\d+_I(\d+)_A(\d+)', i[0]) for i in self.samples[index_next_object:j]]
+                            incl_azi = [(int(i.groups()[0]), int(i.groups()[1])) for i in incl_azi]
+                            selected_index = np.argmin(np.mean(np.abs(np.array(incl_azi)-take_specific_azi_incl), 1))
+                            selected_incl_azi = incl_azi[selected_index]
+                            print(fg.red + f"Viewpoint {take_specific_azi_incl} not found, using {selected_incl_azi}" + rs.fg)
+                            selected_sample = self.samples[index_next_object:j][selected_index]
+                        else:
+                            selected_sample = selected_sample[0]
+
+                        selected_vp_samples.append(selected_sample)
+
+                    else:
+                        itmp = np.random.choice(j - index_next_object, np.min((num_viewpoints_per_object, j - index_next_object)), replace=False)
+                        selected_vp_samples.extend([self.samples[index_next_object:j][i] for i in itmp])
+
                     bar.next(n=j-index_next_object)
                     index_next_object = j
 
@@ -76,7 +164,7 @@ class SelectObjects(ImageFolder):
                 self.samples = selected_vp_samples
 
         # all_objects = np.unique([get_obj_num(i[0]) for i in self.samples])
-        print(f"\nNum Objects: {len(self.selected_objects) if self.selected_objects is not None else 'all'}, num tot samples: {original_sample_size}, num selected vp samples: {len(self.samples)}")
+        print(f"\nNum ALL samples: {original_sample_size}, Num Objects: {len(self.selected_objects) if self.selected_objects is not None else 'all'},  Num selected vp: {num_viewpoints_per_object}, \nFinal Num Samples = num objs x num vp: {len(self.samples)}")
         all_objs_count = {self.idx_to_class[j]: len(np.unique([get_subclass_from_sample(self.idx_to_class, i) for i in self.samples if i[1] == j])) for j in range(len(self.classes))}
         [print('{:25}: {:4}'.format(k, i)) for k, i in all_objs_count.items()]
         tmplst = [np.min((i, len(self.samples)-1)) for i in [0, 1, 3, 5, 100, 2000, -1]]
@@ -104,7 +192,7 @@ class SelectObjects(ImageFolder):
 
 
 class SubclassImageFolder(SelectObjects):
-    def __init__(self, sampler, **kwargs):
+    def __init__(self, sampler=None, **kwargs):
         super().__init__(**kwargs)
         self.subclasses = {}
         self.subclass_to_idx = {}
@@ -135,20 +223,21 @@ class SubclassImageFolder(SelectObjects):
         self.idx_to_subclass = {v: k for k, v in self.subclass_to_idx.items()}
         self.samples_sb = [(a[0], a[1], self.subclass_to_idx[get_subclass_from_sample(self.idx_to_class, a)]) for a in self.samples]
 
-        self.sampler = sampler(subclasses=self.subclasses, subclasses_names=self.subclasses_names, dataset=self)
+        # if sampler is not None:
+        #     # Same-Different sampler
+        #     self.sampler = sampler(subclasses=self.subclasses, subclasses_names=self.subclasses_names, dataset=self)
         print(f"Subclasses folder dataset. Num classes: {len(self.classes)}, num subclasses: {len(self)}")  #name: {self.subclasses_names}") # nope! Too many!
 
-    def __len__(self):
-        return len(self.subclasses_names)
+    # def __len__(self):
+    #     return len(self.subclasses_names)
 
     def __getitem__(self, index):
         path, class_idx, object_idx = self.samples_sb[index]
         sample = self.loader(path)
         if self.transform is not None:
             sample = self.transform(sample)
-
-        return sample, class_idx, object_idx
-
+        sample, class_idx, info = self.finalize_getitem(path=path, sample=sample, labels=class_idx, info={'label_object': object_idx})
+        return sample, class_idx, info
 
 def get_subclass_from_sample(idx_to_class, sample):
     get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
@@ -164,15 +253,17 @@ def get_subclass_with_azi_incl(idx_to_class, sample):
     return name_class + '_' + str(get_obj_num(sample[0])) + f'_I{incl_azi[0]}_A{incl_azi[1]}'
 
 from torch.utils.data.sampler import WeightedRandomSampler
-def get_weighted_sampler(dataset):
-    print("QUI: ")
-    print(np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))]))
-    weights_class = 1 / np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))])
-    weights_dataset = [weights_class[dataset.subclasses_to_classes[i]] for i in dataset.subclasses_names]
-    return WeightedRandomSampler(weights=weights_dataset, num_samples=len(dataset.subclasses_names), replacement=True)
 
 
-class KBatchSampler(Sampler):
+
+class SameDifferentSampler(Sampler):
+    def get_subclasses_weighted_sampler(self, dataset):
+        # print("QUI: ")
+        # print(np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))]))
+        weights_class = 1 / np.array([np.sum([True for k, v in dataset.subclasses_to_classes.items() if v == c]) for c in range(len(dataset.classes))])
+        weights_dataset = [weights_class[dataset.subclasses_to_classes[i]] for i in dataset.subclasses_names]
+        return WeightedRandomSampler(weights=weights_dataset, num_samples=len(dataset.subclasses_names), replacement=True)
+
     def __init__(self, batch_size, dataset, subclasses, subclasses_names, prob_same=0.5, rebalance_classes=False):
         self.dataset = dataset
         self.batch_size = batch_size
@@ -181,8 +272,8 @@ class KBatchSampler(Sampler):
         self.prob_same = prob_same
         # self.subclasses_list = copy.deepcopy(self.subclasses_names)
         if rebalance_classes:
-            self.sampler_training = get_weighted_sampler(dataset)
-            self.sampler_candidate = get_weighted_sampler(dataset)
+            self.sampler_training = self.get_subclasses_weighted_sampler(dataset)
+            self.sampler_candidate = self.get_subclasses_weighted_sampler(dataset)
         else:
             self.sampler_training = RandomSampler(self.subclasses_names)
             self.sampler_candidate = RandomSampler(self.subclasses_names)
@@ -205,15 +296,24 @@ class KBatchSampler(Sampler):
                 yield np.hstack((candidate_idx, training_idx))
                 candidate_idx = []
                 training_idx = []
+        yield np.hstack((candidate_idx, training_idx))
+
+def add_return_path(class_obj):
+    class ImageFolderWithPath(class_obj):
+        def __getitem__(self, index):
+            img, target = super().__getitem__(index)
+            path = self.samples[index][0]
+            return img, target, {'path': path}
+    return ImageFolderWithPath
 
 
 def add_compute_stats(obj_class):
     class ComputeStatsUpdateTransform(obj_class):
         ## This class basically is used for normalize Dataset Objects such as ImageFolder in order to be used in our more general framework
-        def __init__(self, name_generator, additional_PIL_transforms=None, additional_tensor_transforms=None, num_image_calculate_mean_std=70, stats=None, save_stats_file=None, **kwargs):
+        def __init__(self, name_generator, add_PIL_transforms=None, add_tensor_transforms=None, num_image_calculate_mean_std=70, stats=None, save_stats_file=None, **kwargs):
             """
 
-            @param additional_tensor_transforms:
+            @param add_tensor_transforms:
             @param stats: this can be a dict (previous stats, which will contain 'mean': [x, y, z] and 'std': [w, v, u], a path to a pickle file, or None
             @param save_stats_file:
             @param kwargs:
@@ -222,15 +322,15 @@ def add_compute_stats(obj_class):
             super().__init__(**kwargs)
             self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
 
-            if additional_PIL_transforms is None:
-                additional_PIL_transforms = []
-            if additional_tensor_transforms is None:
-                additional_tensor_transforms = []
+            if add_PIL_transforms is None:
+                add_PIL_transforms = []
+            if add_tensor_transforms is None:
+                add_tensor_transforms = []
 
-            self.transform = torchvision.transforms.Compose([*additional_PIL_transforms, torchvision.transforms.ToTensor(), *additional_tensor_transforms])
+            self.transform = torchvision.transforms.Compose([*add_PIL_transforms, torchvision.transforms.ToTensor(), *add_tensor_transforms])
 
             self.name_generator = name_generator
-            self.additional_transform = additional_PIL_transforms
+            self.additional_transform = add_PIL_transforms
             self.num_image_calculate_mean_std = num_image_calculate_mean_std
             self.num_classes = len(self.classes)
             self.name_classes = self.classes
@@ -269,6 +369,10 @@ def add_compute_stats(obj_class):
             self.transform.transforms += [normalize]
 
             print(f'Map class_name -> labels: \n {self.class_to_idx}\n{len(self)} samples.')
+            self.finalize_init()
+
+        def finalize_init(self):
+            pass
 
         def call_compute_stats(self):
             return compute_mean_and_std_from_dataset(self, None, max_iteration=self.num_image_calculate_mean_std)
@@ -276,7 +380,7 @@ def add_compute_stats(obj_class):
         def __getitem__(self, idx, class_name=None):
             image, *rest = super().__getitem__(idx)
             label = rest[0]
-            return image, label, rest[1] if len(rest) > 1 else 1
+            return image, label, rest[1] if len(rest) > 1 else {}
 
     return ComputeStatsUpdateTransform
 
