@@ -87,7 +87,7 @@ class SelectObjects(MyImageFolder):
     def __init__(self, name_classes=None, num_objects_per_class=None, selected_objects=None, num_viewpoints_per_object=None, take_specific_azi_incl=True, save_load_samples_filename=None, **kwargs):
         self.name_classes = name_classes
         # take_specific_azi_incl = False  take random viewpoints
-        #          a                 True  take one specific viewpoint: 75, 36
+        #                           True  take one specific viewpoint: 75, 36
         #                           (x, y) take one specific viewpoint: (x,y)
         # only work if num_viewpoints_per_object is 1, otherwise changed to False.
         if num_viewpoints_per_object == 1 and take_specific_azi_incl is True:
@@ -184,8 +184,7 @@ class SelectObjects(MyImageFolder):
 
     def _find_classes(self, dir: str):
         #re.findall(r'[a-zA-Z]+_?[a-zA-Z]+.n.\d+', self.name_classes) if self.name_classes is not None else None
-        classes_to_take = list(self.name_classes.keys()) if self.name_classes is not None else None
-        classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in classes_to_take if self.name_classes is not None else True)]
+        classes = [d.name for d in os.scandir(dir) if d.is_dir() and (d.name in self.name_classes if self.name_classes is not None else True)]
         classes.sort()
         class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
         return classes, class_to_idx
@@ -223,13 +222,7 @@ class SubclassImageFolder(SelectObjects):
         self.idx_to_subclass = {v: k for k, v in self.subclass_to_idx.items()}
         self.samples_sb = [(a[0], a[1], self.subclass_to_idx[get_subclass_from_sample(self.idx_to_class, a)]) for a in self.samples]
 
-        # if sampler is not None:
-        #     # Same-Different sampler
-        #     self.sampler = sampler(subclasses=self.subclasses, subclasses_names=self.subclasses_names, dataset=self)
-        print(f"Subclasses folder dataset. Num classes: {len(self.classes)}, num subclasses: {len(self)}")  #name: {self.subclasses_names}") # nope! Too many!
-
-    # def __len__(self):
-    #     return len(self.subclasses_names)
+        print(f"Subclasses folder dataset. Num classes: {len(self.classes)}, num subclasses: {len(self)}")
 
     def __getitem__(self, index):
         path, class_idx, object_idx = self.samples_sb[index]
@@ -243,8 +236,6 @@ def get_subclass_from_sample(idx_to_class, sample):
     get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
     name_class = idx_to_class[sample[1]]
     return name_class + '_' + str(get_obj_num(sample[0]))
-    # name_class = self.idx_to_classes[sample[1]]
-    # return name_class + '_' + os.path.split(os.path.split(sample[0])[0])[1]
 
 def get_subclass_with_azi_incl(idx_to_class, sample):
     get_obj_num = lambda name: int(re.search(r"O(\d+)_", name).groups()[0])
