@@ -1,5 +1,5 @@
 from torchvision import transforms
-from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
+from datasets import compute_mean_and_std_from_dataset
 from abc import ABC, abstractmethod
 from torch.utils.data import Dataset
 from generate_datasets.generators.utils_generator import get_range_translation, TranslationType, BackGroundColorType

@@ -3,7 +3,7 @@ import warnings
 import framework_utils
 from visualization import vis_utils as vis
 from generate_datasets.generators.utils_generator import get_range_translation
-from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
+from datasets import compute_mean_and_std_from_dataset
 from functools import partial
 from torch.utils.data import DataLoader
 import numpy as np

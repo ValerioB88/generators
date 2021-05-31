@@ -2,7 +2,7 @@ from mlagents_envs.environment import UnityEnvironment, BehaviorName, DecisionSt
 import mlagents_envs.logging_util as log
 from mlagents_envs.exception import UnityWorkerInUseException
 import framework_utils
-from generate_datasets.dataset_utils.compute_mean_std_dataset import compute_mean_and_std_from_dataset
+from datasets import compute_mean_and_std_from_dataset
 from torch.utils.data import DataLoader
 from torch.utils.data import Sampler
 import warnings
